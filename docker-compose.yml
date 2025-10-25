@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "80:80"
+      - "8404:8404"
+    networks:
+      - frontend-network
+      - backend-network
+    depends_on:
+      - frontend-1
+      - frontend-2
+      - api-backend-1
+      - api-backend-2
+    restart: unless-stopped
+
+  # Frontends (nginx con página simple)
+  frontend-1:
+    image: nginx:alpine
+    container_name: frontend-1
+    networks:
+      - frontend-network
+    command: /bin/sh -c "echo '<h1>Frontend 1 OK</h1>' > /usr/share/nginx/html/index.html && echo 'OK' > /usr/share/nginx/html/health.html && nginx -g 'daemon off;'"
+
+  frontend-2:
+    image: nginx:alpine
+    container_name: frontend-2
+    networks:
+      - frontend-network
+    command: /bin/sh -c "echo '<h1>Frontend 2 OK</h1>' > /usr/share/nginx/html/index.html && echo 'OK' > /usr/share/nginx/html/health.html && nginx -g 'daemon off;'"
+
+  # API Backends (python simple HTTP)
+  api-backend-1:
+    image: python:3.11-alpine
+    container_name: api-backend-1
+    networks:
+      - backend-network
+    command: sh -c "echo 'from http.server import HTTPServer, BaseHTTPRequestHandler; class H(BaseHTTPRequestHandler): def do_GET(self): self.send_response(200); self.end_headers(); self.wfile.write(b\"API Backend 1\"); HTTPServer((\"\", 3000), H).serve_forever()' > s.py && python s.py"
+
+  api-backend-2:
+    image: python:3.11-alpine
+    container_name: api-backend-2
+    networks:
+      - backend-network
+    command: sh -c "echo 'from http.server import HTTPServer, BaseHTTPRequestHandler; class H(BaseHTTPRequestHandler): def do_GET(self): self.send_response(200); self.end_headers(); self.wfile.write(b\"API Backend 2\"); HTTPServer((\"\", 3000), H).serve_forever()' > s.py && python s.py"
+
+  # AI Service
+  ai-service:
+    image: python:3.11-alpine
+    container_name: ai-service
+    networks:
+      - backend-network
+    command: sh -c "echo 'from http.server import HTTPServer, BaseHTTPRequestHandler; class H(BaseHTTPRequestHandler): def do_GET(self): self.send_response(200); self.end_headers(); self.wfile.write(b\"AI Service OK\"); HTTPServer((\"\", 5000), H).serve_forever()' > s.py && python s.py"
+
+  # WebSocket Service  
+  websocket-service:
+    image: python:3.11-alpine
+    container_name: websocket-service
+    networks:
+      - backend-network
+    command: sh -c "echo 'from http.server import HTTPServer, BaseHTTPRequestHandler; class H(BaseHTTPRequestHandler): def do_GET(self): self.send_response(200); self.end_headers(); self.wfile.write(b\"WebSocket OK\"); HTTPServer((\"\", 4000), H).serve_forever()' > s.py && python s.py"
+
+networks:
+  frontend-network:
+    driver: bridge
+  backend-network:
+    driver: bridge
