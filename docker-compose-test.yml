@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "80:80"
+      - "8404:8404"
+    networks:
+      - frontend-network
+      - backend-network
+    depends_on:
+      - frontend-1
+      - frontend-2
+
+  frontend-1:
+    image: nginx:alpine
+    networks:
+      - frontend-network
+
+  frontend-2:
+    image: nginx:alpine
+    networks:
+      - frontend-network
+
+  api-backend-1:
+    image: httpd:alpine
+    networks:
+      - backend-network
+
+  api-backend-2:
+    image: httpd:alpine
+    networks:
+      - backend-network
+
+  ai-service:
+    image: httpd:alpine
+    networks:
+      - backend-network
+
+  websocket-service:
+    image: httpd:alpine
+    networks:
+      - backend-network
+
+networks:
+  frontend-network:
+  backend-network:
