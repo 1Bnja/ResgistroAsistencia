@@ -23,14 +23,14 @@ services:
     networks:
       - frontend-network
 
-  api-backend-1:
+  api-backend-slave:
     image: httpd:alpine
     networks:
       - backend-network
 
   api-backend:
     build:
-      context: .
+      context: ./services/api-backend
       dockerfile: Dockerfile
     container_name: api-backend-dev
     ports:
