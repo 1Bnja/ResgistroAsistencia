@@ -1,0 +1,27 @@
+
+services:
+  api-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-backend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: ${MONGODB_URI}
+      
+    networks:
+      - dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  dev-network:
+    driver: bridge
