@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
+const slaveGuard = require('./middleware/slaveGuard');
 
 // Importar rutas
 const usuariosRoutes = require('./routes/usuarios');
@@ -22,6 +23,9 @@ app.use(cors()); // CORS
 app.use(morgan('dev')); // Logging
 app.use(express.json({ limit: '10mb' })); // JSON body parser
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware que protege la instancia slave (read-only)
+app.use(slaveGuard);
 
 // Health check
 app.get('/health', (req, res) => {
