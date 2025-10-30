@@ -1,3 +1,4 @@
+
 version: '3.8'
 
 services:
@@ -9,40 +10,84 @@ services:
     networks:
       - frontend-network
       - backend-network
-    depends_on:
-      - frontend-1
-      - frontend-2
+    
 
-  frontend-1:
-    image: nginx:alpine
-    networks:
-      - frontend-network
-
-  frontend-2:
-    image: nginx:alpine
-    networks:
-      - frontend-network
-
-  api-backend-1:
-    image: httpd:alpine
-    networks:
-      - backend-network
-
-  api-backend-2:
-    image: httpd:alpine
+  api-backend-slave:
+    build:
+      context: ./services/api-backend
+      dockerfile: Dockerfile
+    container_name: api-backend-slave
+    ports:
+      - "3001:3000"
+    env_file:
+      - ./services/api-backend/src/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      ROLE: slave
+      # Si dispones de una replica de lectura, puedes definir MONGODB_READ_URI en tu entorno
+      MONGODB_READ_URI: ${MONGODB_READ_URI}
     networks:
       - backend-network
+      - dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  api-backend:
+    build:
+      context: ./services/api-backend
+      dockerfile: Dockerfile
+    container_name: api-backend-dev
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./services/api-backend/src/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      
+    networks:
+      - backend-network
+      - dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   ai-service:
     image: httpd:alpine
+    container_name: ai-service
     networks:
       - backend-network
 
   websocket-service:
     image: httpd:alpine
+    container_name: websocket-service
     networks:
       - backend-network
+
+  frontend-1:
+    image: nginx:alpine
+    container_name: frontend-1
+    networks:
+      - frontend-network
+
+  frontend-2:
+    image: nginx:alpine
+    container_name: frontend-2
+    networks:
+      - frontend-network
 
 networks:
   frontend-network:
   backend-network:
+  dev-network:
+    driver: bridge
