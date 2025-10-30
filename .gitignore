@@ -1,2 +1,41 @@
-.env   
+# Variables de entorno
+.env
+
+# Dependencias
 node_modules/
+__pycache__/
+*.pyc
+venv/
+env/
+
+# Logs
+*.log
+logs/
+volumes/logs/
+
+# Datos persistentes
+volumes/mongodb-primary/
+volumes/mongodb-replica/
+volumes/redis-data/
+volumes/backups/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporales
+*.tmp
+temp/
+tmp/
