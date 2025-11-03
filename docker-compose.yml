@@ -5,7 +5,7 @@ services:
   api-gateway:
     build: ./services/api-gateway
     ports:
-      - "80:80"
+      - "8080:80"
       - "8404:8404"
     networks:
       - frontend-network
@@ -75,16 +75,22 @@ services:
       - backend-network
 
   frontend-1:
-    image: nginx:alpine
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
     container_name: frontend-1
     networks:
       - frontend-network
+    restart: unless-stopped
 
   frontend-2:
-    image: nginx:alpine
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
     container_name: frontend-2
     networks:
       - frontend-network
+    restart: unless-stopped
 
 networks:
   frontend-network:
