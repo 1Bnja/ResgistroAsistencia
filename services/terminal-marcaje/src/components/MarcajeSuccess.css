@@ -1,0 +1,161 @@
+.marcaje-success {
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.success-icon {
+  margin-bottom: 20px;
+}
+
+.icon-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  color: white;
+  margin: 0 auto;
+  animation: scaleIn 0.5s ease;
+}
+
+.marcaje-success h2 {
+  font-size: 28px;
+  color: #333;
+  margin-bottom: 30px;
+  text-transform: capitalize;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.user-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.user-details h3 {
+  font-size: 22px;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.user-details p {
+  color: #666;
+  font-size: 16px;
+}
+
+.marcaje-details {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-item .label {
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-item .value {
+  color: #333;
+  font-weight: 600;
+}
+
+.atraso-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #856404;
+}
+
+.atraso-warning svg {
+  flex-shrink: 0;
+}
+
+.atraso-warning p {
+  margin: 0;
+  font-size: 14px;
+  text-align: left;
+}
+
+.success-message {
+  margin-top: 30px;
+}
+
+.success-message p {
+  font-size: 18px;
+  color: #667eea;
+  font-weight: 500;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .marcaje-success h2 {
+    font-size: 22px;
+  }
+
+  .user-info {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .user-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 22px;
+  }
+
+  .detail-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 5px;
+  }
+}
