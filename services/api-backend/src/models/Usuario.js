@@ -47,11 +47,15 @@ const usuarioSchema = new mongoose.Schema({
   },
   fotoFacial: {
     type: String, // Base64 o URL de la imagen
-    required: true
+    required: false
   },
   encodingFacial: {
     type: String, // Encoding procesado por IA
     required: false
+  },
+  reconocimientoFacialActivo: {
+    type: Boolean,
+    default: false
   },
   horarioId: {
     type: mongoose.Schema.Types.ObjectId,

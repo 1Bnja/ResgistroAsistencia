@@ -37,6 +37,10 @@ const marcajeSchema = new mongoose.Schema({
     type: String,
     default: 'Terminal Principal'
   },
+  confianzaIA: {
+    type: Number, // Nivel de confianza del reconocimiento facial (0-1)
+    required: false
+  },
   observaciones: {
     type: String
   },

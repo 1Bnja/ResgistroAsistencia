@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   registrarMarcaje,
+  registrarMarcajeReconocimiento,
   getMarcajes,
   getMarcajesHoy,
   getEstadisticas
@@ -9,8 +10,9 @@ const {
 
 const { protect, authorize } = require('../middleware/auth');
 
-// Ruta pública para el terminal
+// Rutas públicas para terminales
 router.post('/registrar', registrarMarcaje);
+router.post('/reconocimiento', registrarMarcajeReconocimiento);
 
 // Rutas protegidas
 router.use(protect);

@@ -31,6 +31,110 @@ const calcularAtraso = (horaEntrada, horaMarcaje, toleranciaMinutos) => {
   }
 };
 
+// Registrar marcaje desde reconocimiento facial (DESDE API-IA)
+exports.registrarMarcajeReconocimiento = async (req, res) => {
+  try {
+    const { usuarioId, confianza, tipo } = req.body;
+
+    // Validar datos
+    if (!usuarioId) {
+      return res.status(400).json({
+        success: false,
+        message: 'usuarioId es requerido'
+      });
+    }
+
+    // Buscar usuario y su horario
+    const usuario = await Usuario.findById(usuarioId).populate('horarioId');
+    
+    if (!usuario || !usuario.activo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado o inactivo'
+      });
+    }
+
+    // Obtener hora actual
+    const ahora = new Date();
+    const hora = ahora.toTimeString().split(' ')[0]; // "HH:mm:ss"
+    
+    // Calcular si hay atraso (solo para entradas)
+    let estado = 'puntual';
+    let minutosAtraso = 0;
+
+    if (tipo === 'entrada') {
+      const resultado = calcularAtraso(
+        usuario.horarioId.horaEntrada,
+        hora,
+        usuario.horarioId.toleranciaMinutos
+      );
+      estado = resultado.estado;
+      minutosAtraso = resultado.minutosAtraso;
+    }
+
+    // Crear marcaje
+    const marcaje = await Marcaje.create({
+      usuarioId: usuario._id,
+      tipo: tipo || 'entrada',
+      fecha: ahora,
+      hora,
+      estado,
+      minutosAtraso,
+      ubicacion: 'Terminal Reconocimiento Facial',
+      confianzaIA: confianza
+    });
+
+    // Si hay atraso, enviar notificacion
+    if (estado === 'atraso') {
+      try {
+        await axios.post(`${process.env.NOTIFICATION_SERVICE_URL}/notify`, {
+          destinatario: usuario.email,
+          asunto: `Registro de atraso - ${usuario.nombre} ${usuario.apellido}`,
+          tipo: 'atraso',
+          data: {
+            nombre: usuario.nombre,
+            apellido: usuario.apellido,
+            fecha: ahora.toLocaleDateString('es-CL'),
+            hora,
+            minutosAtraso,
+            horaEsperada: usuario.horarioId.horaEntrada
+          }
+        });
+        
+        marcaje.notificacionEnviada = true;
+        await marcaje.save();
+      } catch (emailError) {
+        console.error('Error al enviar notificacion:', emailError.message);
+      }
+    }
+
+    // Devolver respuesta con datos del usuario
+    res.status(201).json({
+      success: true,
+      message: `Marcaje de ${tipo || 'entrada'} registrado exitosamente`,
+      data: {
+        marcaje,
+        usuario: {
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          cargo: usuario.cargo,
+          rut: usuario.rut
+        },
+        estado,
+        minutosAtraso
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en registrarMarcajeReconocimiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al registrar marcaje',
+      error: error.message
+    });
+  }
+};
+
 // Registrar marcaje (DESDE EL TERMINAL)
 exports.registrarMarcaje = async (req, res) => {
   try {

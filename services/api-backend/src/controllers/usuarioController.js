@@ -1,6 +1,7 @@
 const Usuario = require('../models/Usuario');
 const Horario = require('../models/Horario');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 
 // Obtener todos los usuarios
 exports.getUsuarios = async (req, res) => {
@@ -203,6 +204,106 @@ exports.login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al iniciar sesión',
+      error: error.message
+    });
+  }
+};
+
+// Entrenar reconocimiento facial del usuario
+exports.entrenarReconocimientoFacial = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { imagenes } = req.body; // Array de imágenes en base64
+
+    if (!imagenes || !Array.isArray(imagenes) || imagenes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe proporcionar al menos una imagen'
+      });
+    }
+
+    // Buscar usuario
+    const usuario = await Usuario.findById(id);
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    // Llamar a API-IA para entrenar el modelo
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:5000';
+    
+    try {
+      const response = await axios.post(`${aiServiceUrl}/train`, {
+        usuario_id: usuario._id.toString(),
+        nombre: `${usuario.nombre} ${usuario.apellido}`,
+        imagenes: imagenes
+      }, {
+        timeout: 60000 // 60 segundos para procesamiento
+      });
+
+      if (response.data.success) {
+        // Actualizar flag de reconocimiento facial entrenado
+        usuario.reconocimientoFacialActivo = true;
+        await usuario.save();
+
+        res.json({
+          success: true,
+          message: 'Reconocimiento facial entrenado exitosamente',
+          data: {
+            rostros_procesados: response.data.rostros_procesados,
+            encodings_guardados: response.data.encodings_guardados
+          }
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: response.data.message || 'Error al entrenar el modelo'
+        });
+      }
+    } catch (aiError) {
+      console.error('Error llamando a API-IA:', aiError.message);
+      res.status(503).json({
+        success: false,
+        message: 'Servicio de reconocimiento facial no disponible',
+        error: aiError.message
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al entrenar reconocimiento facial',
+      error: error.message
+    });
+  }
+};
+
+// Obtener estado del reconocimiento facial
+exports.getEstadoReconocimiento = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const usuario = await Usuario.findById(id).select('reconocimientoFacialActivo nombre apellido');
+    
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        activo: usuario.reconocimientoFacialActivo || false,
+        usuario: `${usuario.nombre} ${usuario.apellido}`
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener estado del reconocimiento',
       error: error.message
     });
   }

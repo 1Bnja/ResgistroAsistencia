@@ -221,6 +221,34 @@ export const usuariosAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  entrenarFacial: async (id, imagenes) => {
+    if (USE_MOCK) {
+      await mockDelay(2000);
+      return { 
+        data: { 
+          success: true, 
+          message: 'Reconocimiento facial entrenado exitosamente',
+          data: {
+            rostros_procesados: imagenes.length,
+            encodings_guardados: imagenes.length
+          }
+        } 
+      };
+    }
+    return api.post(`/usuarios/${id}/entrenar-facial`, { imagenes });
+  },
+  getEstadoFacial: async (id) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { 
+        data: { 
+          success: true, 
+          data: { activo: Math.random() > 0.5, usuario: 'Mock Usuario' }
+        } 
+      };
+    }
+    return api.get(`/usuarios/${id}/estado-facial`);
+  },
 };
 
 // ========== MARCAJES ==========
@@ -315,7 +343,7 @@ export const horariosAPI = {
 
 // ========== RECONOCIMIENTO FACIAL ==========
 export const facialAPI = {
-  recognize: async (formData) => {
+  recognize: async (imageBase64) => {
     if (USE_MOCK) {
       await mockDelay(1000);
       // Simular reconocimiento exitoso con usuario aleatorio
@@ -323,15 +351,21 @@ export const facialAPI = {
       return {
         data: {
           success: true,
-          recognized: true,
-          usuario: randomUser,
-          confidence: 0.95
+          rostros: [{
+            usuario_id: randomUser._id,
+            nombre: `${randomUser.nombre} ${randomUser.apellido}`,
+            confianza: 0.95,
+            reconocido: true
+          }]
         }
       };
     }
-    return api.post('/facial/recognize', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    // En prod, enviar a API-IA
+    const response = await axios.post('http://localhost:5000/recognize-and-mark', {
+      image: imageBase64,
+      tipo: 'entrada'
     });
+    return response;
   },
   trainModel: async (userId) => {
     if (USE_MOCK) {

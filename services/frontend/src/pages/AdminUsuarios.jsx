@@ -4,7 +4,8 @@ import Card from '../components/Card';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
 import Alert from '../components/Alert';
-import { FaPlus, FaEdit, FaTrash, FaCamera, FaUser } from 'react-icons/fa';
+import FacialTraining from '../components/FacialTraining';
+import { FaPlus, FaEdit, FaTrash, FaCamera, FaUser, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 const AdminUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -12,7 +13,10 @@ const AdminUsuarios = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [facialModalOpen, setFacialModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [trainingUser, setTrainingUser] = useState(null);
+  const [trainingLoading, setTrainingLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -124,6 +128,42 @@ const AdminUsuarios = () => {
     }
   };
 
+  const handleOpenFacialTraining = (usuario) => {
+    setTrainingUser(usuario);
+    setFacialModalOpen(true);
+  };
+
+  const handleCloseFacialTraining = () => {
+    setFacialModalOpen(false);
+    setTrainingUser(null);
+    setError('');
+  };
+
+  const handleCompleteFacialTraining = async (imagenes) => {
+    if (!trainingUser) return;
+
+    try {
+      setTrainingLoading(true);
+      setError('');
+
+      const response = await usuariosAPI.entrenarFacial(trainingUser._id, imagenes);
+
+      if (response.data.success) {
+        setSuccess(
+          `Reconocimiento facial entrenado: ${response.data.data.encodings_guardados} foto(s) procesada(s)`
+        );
+        handleCloseFacialTraining();
+        loadUsuarios();
+        setTimeout(() => setSuccess(''), 5000);
+      }
+    } catch (err) {
+      console.error('Error entrenando reconocimiento facial:', err);
+      setError(err.response?.data?.message || 'Error al entrenar el reconocimiento facial');
+    } finally {
+      setTrainingLoading(false);
+    }
+  };
+
   if (loading) {
     return <Loader message="Cargando usuarios..." />;
   }
@@ -153,6 +193,7 @@ const AdminUsuarios = () => {
                   <th>Email</th>
                   <th>Rol</th>
                   <th>Horario</th>
+                  <th>Reconocimiento</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -174,16 +215,36 @@ const AdminUsuarios = () => {
                     </td>
                     <td>{usuario.horario?.nombre || 'Sin asignar'}</td>
                     <td>
+                      {usuario.reconocimientoFacialActivo ? (
+                        <span className="facial-status active" title="Reconocimiento facial activo">
+                          <FaCheckCircle /> Activo
+                        </span>
+                      ) : (
+                        <span className="facial-status inactive" title="Reconocimiento facial no configurado">
+                          <FaTimesCircle /> Inactivo
+                        </span>
+                      )}
+                    </td>
+                    <td>
                       <div className="action-buttons">
+                        <button
+                          className="btn btn-sm btn-warning"
+                          onClick={() => handleOpenFacialTraining(usuario)}
+                          title="Entrenar reconocimiento facial"
+                        >
+                          <FaCamera />
+                        </button>
                         <button
                           className="btn btn-sm btn-info"
                           onClick={() => handleOpenModal(usuario)}
+                          title="Editar usuario"
                         >
                           <FaEdit />
                         </button>
                         <button
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDelete(usuario._id)}
+                          title="Eliminar usuario"
                         >
                           <FaTrash />
                         </button>
@@ -281,6 +342,28 @@ const AdminUsuarios = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={facialModalOpen}
+        onClose={handleCloseFacialTraining}
+        title="Entrenamiento de Reconocimiento Facial"
+        size="large"
+      >
+        {trainingLoading ? (
+          <div className="training-loading">
+            <Loader message="Entrenando modelo de reconocimiento facial..." />
+            <p style={{ textAlign: 'center', marginTop: '20px', color: '#666' }}>
+              Este proceso puede tomar algunos segundos...
+            </p>
+          </div>
+        ) : (
+          <FacialTraining
+            usuarioNombre={trainingUser ? `${trainingUser.nombre} ${trainingUser.apellido}` : ''}
+            onComplete={handleCompleteFacialTraining}
+            onCancel={handleCloseFacialTraining}
+          />
+        )}
       </Modal>
     </div>
   );
