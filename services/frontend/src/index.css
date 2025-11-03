@@ -595,6 +595,10 @@ body {
 }
 
 .modal-large {
+  max-width: 1200px;
+}
+
+.modal-large {
   max-width: 900px;
 }
 
@@ -1305,4 +1309,34 @@ a:focus-visible {
   .card-body {
     padding: 1rem;
   }
+}
+
+/* ========== FACIAL RECOGNITION STATUS ========== */
+.facial-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.facial-status.active {
+  color: var(--success-color);
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.facial-status.inactive {
+  color: var(--gray-500);
+  background-color: var(--gray-100);
+}
+
+.training-loading {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
 }

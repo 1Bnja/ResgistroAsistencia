@@ -1,0 +1,29 @@
+# 1. La base: Empezamos con una imagen oficial de Python
+FROM python:3.10-slim
+
+# 2. Instalar las dependencias de LINUX
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    libboost-python-dev \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgl1 \
+    libglib2.0-0
+# 3. Establecer el directorio de trabajo dentro del contenedor
+WORKDIR /app
+
+# 4. Instalar las bibliotecas de Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 5. Copiar el resto de nuestro código
+COPY . .
+
+# 6. Exponer el puerto para nuestra aplicación web
+EXPOSE 5000
+
+# 7. El comando que se ejecutará cuando inicie el contenedor
+CMD ["python", "reconocimiento.py"]

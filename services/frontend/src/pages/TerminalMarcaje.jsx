@@ -72,34 +72,24 @@ const TerminalMarcaje = () => {
       setError('');
       setResult(null);
 
-      // Convertir data URL a blob
-      const blob = await fetch(photo).then((r) => r.blob());
-      const formData = new FormData();
-      formData.append('image', blob, 'photo.jpg');
+      // Enviar imagen directamente a API-IA que registrará el marcaje
+      const response = await facialAPI.recognize(photo);
 
-      // Reconocimiento facial
-      const recognitionRes = await facialAPI.recognize(formData);
-      const { usuarioId, confianza } = recognitionRes.data;
-
-      if (!usuarioId) {
-        setError('No se pudo reconocer el rostro. Intenta nuevamente.');
-        return;
+      if (response.data.success && response.data.reconocido) {
+        // El marcaje ya fue registrado por la API-IA
+        setResult({
+          success: true,
+          marcaje: response.data.marcaje,
+          usuario: response.data.marcaje.usuario,
+          rostro: response.data.rostro
+        });
+      } else {
+        setError(response.data.message || 'No se pudo reconocer el rostro');
+        setResult({ success: false });
       }
-
-      // Registrar marcaje
-      const marcajeRes = await marcajesAPI.registrar({
-        usuarioId,
-        confianza,
-      });
-
-      setResult({
-        success: true,
-        marcaje: marcajeRes.data.marcaje,
-        usuario: marcajeRes.data.usuario,
-      });
     } catch (err) {
       console.error('Error procesando marcaje:', err);
-      setError(err.response?.data?.mensaje || 'Error al procesar el marcaje');
+      setError(err.response?.data?.message || 'Error al procesar el marcaje');
       setResult({ success: false });
     } finally {
       setLoading(false);
