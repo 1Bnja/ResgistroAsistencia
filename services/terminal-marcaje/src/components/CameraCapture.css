@@ -1,0 +1,178 @@
+.camera-capture {
+  width: 100%;
+  max-width: 600px;
+  animation: fadeIn 0.3s ease;
+}
+
+.camera-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.camera-header h3 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 8px;
+  text-transform: capitalize;
+}
+
+.camera-header p {
+  color: #666;
+  font-size: 14px;
+}
+
+.camera-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.face-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.face-guide {
+  width: 250px;
+  height: 300px;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+  animation: pulse 2s infinite;
+}
+
+.countdown-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.countdown-number {
+  font-size: 120px;
+  font-weight: bold;
+  color: white;
+  animation: scaleIn 0.5s ease;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.camera-controls {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.btn-cancel,
+.btn-capture {
+  padding: 15px 40px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.btn-capture {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  flex: 1;
+  max-width: 200px;
+}
+
+.btn-capture:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-cancel:disabled,
+.btn-capture:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.camera-error {
+  text-align: center;
+  padding: 40px;
+}
+
+.camera-error .error-icon {
+  font-size: 60px;
+  margin-bottom: 20px;
+}
+
+.camera-error h3 {
+  font-size: 24px;
+  color: #ef4444;
+  margin-bottom: 10px;
+}
+
+.camera-error p {
+  color: #666;
+  margin-bottom: 30px;
+}
+
+@media (max-width: 768px) {
+  .camera-capture {
+    max-width: 100%;
+  }
+
+  .face-guide {
+    width: 200px;
+    height: 240px;
+  }
+
+  .countdown-number {
+    font-size: 80px;
+  }
+
+  .camera-controls {
+    flex-direction: column-reverse;
+  }
+
+  .btn-cancel,
+  .btn-capture {
+    width: 100%;
+    max-width: 100%;
+  }
+}
