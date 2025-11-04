@@ -21,8 +21,18 @@ connectDB();
 app.use(helmet()); // Seguridad
 app.use(cors()); // CORS
 app.use(morgan('dev')); // Logging
-app.use(express.json({ limit: '10mb' })); // JSON body parser
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' })); // JSON body parser con límite aumentado
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Middleware de debug para requests grandes
+app.use((req, res, next) => {
+  if (req.path.includes('entrenar-facial')) {
+    console.log('🔍 Request a entrenar-facial');
+    console.log('📦 Content-Length:', req.headers['content-length']);
+    console.log('📦 Content-Type:', req.headers['content-type']);
+  }
+  next();
+});
 
 // Middleware que protege la instancia slave (read-only)
 app.use(slaveGuard);
@@ -41,6 +51,10 @@ const API_VERSION = process.env.API_VERSION || 'v1';
 app.use(`/api/${API_VERSION}/usuarios`, usuariosRoutes);
 app.use(`/api/${API_VERSION}/marcajes`, marcajesRoutes);
 app.use(`/api/${API_VERSION}/horarios`, horariosRoutes);
+
+// Ruta especial para sincronización AI (sin auth)
+const { getSyncEncodings } = require('./controllers/usuarioController');
+app.get(`/api/${API_VERSION}/sync-encodings`, getSyncEncodings);
 
 // Ruta 404
 app.use('*', (req, res) => {

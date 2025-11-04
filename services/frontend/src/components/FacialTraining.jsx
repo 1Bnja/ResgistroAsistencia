@@ -106,39 +106,16 @@ export default function FacialTraining({ usuarioId, nombreUsuario, onComplete, o
 
     setLoading(true);
     setAlert(null);
-    setProgress('Enviando fotos al servicio de IA...');
+    setProgress('Entrenando modelo...');
 
     try {
       console.log(`🤖 Training with ${photos.length} photos`);
       
-      const response = await fetch(`${AI_URL}/train`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          usuario_id: usuarioId,
-          nombre: nombreUsuario,
-          imagenes: photos
-        })
-      });
-
-      const data = await response.json();
-      console.log('📥 Training response:', data);
-
-      if (!response.ok || !data.success) {
-        setAlert({ type: 'error', message: data.message || 'Error en entrenamiento' });
-        setProgress('');
-        return;
-      }
-
-      setAlert({
-        type: 'success',
-        message: `¡Entrenamiento exitoso! ${data.rostros_procesados} fotos procesadas`
-      });
-      
+      // Pasar las fotos al componente padre para que haga la llamada al backend
       setTimeout(() => {
         stopCamera();
-        if (onComplete) onComplete(data);
-      }, 2000);
+        if (onComplete) onComplete(photos); // Enviar array de fotos, no la respuesta
+      }, 500);
 
     } catch (error) {
       console.error('❌ Training error:', error);

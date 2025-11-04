@@ -67,7 +67,7 @@ services:
     ports:
       - "5050:5000"
     environment:
-      BACKEND_URL: http://api-backend:3000/api
+      BACKEND_URL: http://api-backend:3000/api/v1
       FLASK_DEBUG: "False"
     networks:
       - backend-network
