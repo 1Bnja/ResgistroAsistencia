@@ -1,5 +1,5 @@
 """
-API de Reconocimiento Facial - Sistema de Asistencia
+API de Reconoc  imiento Facial - Sistema de Asistencia
 Servicio Flask que procesa imagenes, reconoce rostros y se comunica con el backend
 """
 
@@ -383,8 +383,11 @@ def train():
     """
     try:
         data = request.get_json()
+        print(f"=== TRAIN REQUEST ===")
+        print(f"Data keys: {data.keys() if data else 'None'}")
         
         if not data or 'usuario_id' not in data:
+            print(f"ERROR: Missing usuario_id. Data: {data}")
             return jsonify({
                 'success': False,
                 'message': 'Se requiere usuario_id'
@@ -414,22 +417,41 @@ def train():
             try:
                 frame = imagen_base64_a_array(imagen_b64)
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                face_locations = face_recognition.face_locations(rgb_frame, model="cnn")
+                
+                # Asegurar tamaño mínimo para detección CNN
+                h, w = rgb_frame.shape[:2]
+                print(f"Imagen {idx + 1}: {w}x{h}", flush=True)
+                
+                # Si la imagen es pequeña, aumentar su tamaño
+                if w < 800 or h < 600:
+                    scale_factor = max(800/w, 600/h)
+                    new_w = int(w * scale_factor)
+                    new_h = int(h * scale_factor)
+                    rgb_frame = cv2.resize(rgb_frame, (new_w, new_h))
+                    print(f"Imagen redimensionada a: {new_w}x{new_h}", flush=True)
+                
+                # Usar modelo HOG (más rápido y funciona mejor con imágenes pequeñas)
+                face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+                print(f"Face locations encontradas: {len(face_locations)}", flush=True)
                 
                 if not face_locations:
                     errores.append(f"Imagen {idx + 1}: No se detectó ningún rostro")
+                    print(f"Imagen {idx + 1}: No se detectó rostro", flush=True)
                     continue
                 
                 if len(face_locations) > 1:
                     errores.append(f"Imagen {idx + 1}: Se detectaron múltiples rostros")
+                    print(f"Imagen {idx + 1}: Múltiples rostros detectados: {len(face_locations)}", flush=True)
                     continue
                 
                 face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
                 if face_encodings:
                     nuevos_encodings.append(face_encodings[0])
                     rostros_procesados += 1
+                    print(f"Imagen {idx + 1}: Encoding generado exitosamente", flush=True)
                     
             except Exception as e:
+                print(f"Imagen {idx + 1}: EXCEPCIÓN - {str(e)}", flush=True)
                 errores.append(f"Imagen {idx + 1}: Error - {str(e)}")
                 continue
         

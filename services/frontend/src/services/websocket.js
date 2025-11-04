@@ -7,6 +7,11 @@ class WebSocketService {
   }
 
   connect() {
+    // ⚠️ WebSocket DESHABILITADO - El servicio no está disponible
+    console.warn('⚠️ WebSocket deshabilitado: El servicio de notificaciones en tiempo real no está disponible');
+    return;
+    
+    /* CÓDIGO DESHABILITADO - Para habilitar, elimina el return de arriba
     if (this.socket?.connected) {
       return;
     }
@@ -46,6 +51,7 @@ class WebSocketService {
     this.socket.on('usuario-actualizado', (data) => {
       this.emit('usuario-actualizado', data);
     });
+    */
   }
 
   disconnect() {

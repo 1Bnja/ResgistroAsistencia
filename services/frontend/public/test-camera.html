@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Cámara</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            height: 480px;
+            background: #000;
+            border-radius: 10px;
+            display: block;
+            margin: 20px auto;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.stop {
+            background: #f44336;
+        }
+        button.stop:hover {
+            background: #da190b;
+        }
+        #log {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-item {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #4CAF50;
+            padding-left: 10px;
+        }
+        .log-error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .log-info {
+            border-left-color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Test de Cámara - Debug</h1>
+        <p>Esta página prueba si la cámara funciona correctamente en tu navegador.</p>
+        
+        <div style="text-align: center;">
+            <button id="startBtn" onclick="startCamera()">▶️ Iniciar Cámara</button>
+            <button id="stopBtn" class="stop" onclick="stopCamera()" style="display: none;">⏹️ Detener Cámara</button>
+        </div>
+        
+        <video id="video" autoplay playsinline muted></video>
+        
+        <div id="log">
+            <div class="log-item">Esperando acción del usuario...</div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const logDiv = document.getElementById('log');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        let stream = null;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const item = document.createElement('div');
+            item.className = `log-item log-${type}`;
+            item.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(item);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        async function startCamera() {
+            try {
+                log('🎬 Iniciando cámara...', 'info');
+                log('📋 Navegador: ' + navigator.userAgent, 'info');
+                
+                // Verificar si getUserMedia está disponible
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('getUserMedia no está disponible en este navegador');
+                }
+                
+                log('✅ getUserMedia disponible', 'info');
+                log('🔍 Solicitando permisos de cámara...', 'info');
+                
+                // Solicitar stream
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+                
+                log('✅ Stream obtenido correctamente', 'info');
+                log(`📹 Tracks de video: ${stream.getVideoTracks().length}`, 'info');
+                
+                stream.getVideoTracks().forEach((track, i) => {
+                    log(`  Track ${i}: ${track.label} (${track.readyState})`, 'info');
+                    log(`  Settings: ${JSON.stringify(track.getSettings())}`, 'info');
+                });
+                
+                // Asignar stream al video
+                video.srcObject = stream;
+                log('✅ Stream asignado al elemento video', 'info');
+                
+                // Intentar reproducir
+                video.onloadedmetadata = function() {
+                    log('✅ Metadata cargada', 'info');
+                    log(`📐 Dimensiones: ${video.videoWidth}x${video.videoHeight}`, 'info');
+                    log(`🎬 ReadyState: ${video.readyState}`, 'info');
+                };
+                
+                video.oncanplay = function() {
+                    log('✅ Video listo para reproducir (canplay)', 'info');
+                };
+                
+                video.onplay = function() {
+                    log('✅ Video reproduciendo (play event)', 'info');
+                };
+                
+                try {
+                    await video.play();
+                    log('✅ video.play() ejecutado correctamente', 'info');
+                } catch (playErr) {
+                    log(`⚠️ Error en play(): ${playErr.message}`, 'error');
+                }
+                
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                
+            } catch (err) {
+                log(`❌ ERROR: ${err.name}`, 'error');
+                log(`❌ Mensaje: ${err.message}`, 'error');
+                
+                if (err.name === 'NotAllowedError') {
+                    log('💡 Solución: Debes permitir el acceso a la cámara en tu navegador', 'error');
+                } else if (err.name === 'NotFoundError') {
+                    log('💡 Solución: No se encontró ninguna cámara en el dispositivo', 'error');
+                } else if (err.name === 'NotReadableError') {
+                    log('💡 Solución: La cámara está siendo usada por otra aplicación', 'error');
+                }
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => {
+                    track.stop();
+                    log(`⏹️ Track detenido: ${track.label}`, 'info');
+                });
+                video.srcObject = null;
+                stream = null;
+                log('✅ Cámara detenida', 'info');
+                
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        // Info del sistema al cargar
+        log('🌐 Página de test cargada', 'info');
+        log(`🖥️ Sistema: ${navigator.platform}`, 'info');
+        log(`📱 User Agent: ${navigator.userAgent}`, 'info');
+    </script>
+</body>
+</html>
