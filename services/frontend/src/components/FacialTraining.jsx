@@ -152,33 +152,45 @@ export default function FacialTraining({ usuarioId, nombreUsuario, onComplete, o
   const canTrain = photos.length >= MIN_PHOTOS && photos.length <= MAX_PHOTOS;
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold mb-2">Entrenamiento Facial</h2>
-        <p className="text-gray-600">Usuario: {nombreUsuario}</p>
-        <p className="text-sm text-gray-500 mt-1">
-          Fotos capturadas: {photos.length} / {MAX_PHOTOS} (mínimo: {MIN_PHOTOS})
-        </p>
+    <div className="facial-training-container">
+      {/* Header moderno */}
+      <div className="facial-training-header">
+        <div className="header-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"/>
+            <path d="M12 14c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z"/>
+          </svg>
+        </div>
+        <h2>Entrenamiento de Reconocimiento Facial</h2>
+        <p className="subtitle">{nombreUsuario}</p>
+        <div className="progress-badge">
+          <span className="photo-count">{photos.length}</span>
+          <span className="separator">/</span>
+          <span className="photo-max">{MAX_PHOTOS}</span>
+          <span className="label">fotos</span>
+        </div>
       </div>
 
       {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
 
       {progress && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          <p className="text-blue-800">{progress}</p>
+        <div className="progress-banner">
+          <div className="spinner"></div>
+          <p>{progress}</p>
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Video de la cámara */}
-        <div>
-          <div className="relative bg-gray-900 rounded-lg overflow-hidden" style={{ minHeight: '360px' }}>
+      <div className="training-grid">
+        {/* Vista previa de cámara mejorada */}
+        <div className="camera-section">
+          <div className="camera-preview">
             {!cameraActive ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-white text-center">
-                  <div className="text-4xl mb-2">📷</div>
-                  <p>Cámara desactivada</p>
-                </div>
+              <div className="camera-placeholder">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+                <p>Cámara desactivada</p>
               </div>
             ) : (
               <>
@@ -187,11 +199,13 @@ export default function FacialTraining({ usuarioId, nombreUsuario, onComplete, o
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
-                  style={{ minHeight: '360px' }}
+                  className="camera-video"
                 />
+                <div className="camera-overlay">
+                  <div className="face-guide"></div>
+                </div>
                 {loading && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="processing-overlay">
                     <Loader />
                   </div>
                 )}
@@ -201,77 +215,105 @@ export default function FacialTraining({ usuarioId, nombreUsuario, onComplete, o
 
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-          <div className="mt-4 flex gap-2">
+          <div className="camera-controls">
             <button
               onClick={capturePhoto}
               disabled={loading || !cameraActive || photos.length >= MAX_PHOTOS}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 font-semibold"
+              className="btn btn-capture btn-primary"
             >
-              📸 Capturar Foto
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              Capturar Foto
             </button>
             {photos.length > 0 && (
               <button
                 onClick={() => setPhotos([])}
                 disabled={loading}
-                className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400"
+                className="btn btn-clear btn-secondary"
               >
-                🗑️ Borrar Todas
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/>
+                </svg>
+                Limpiar
               </button>
             )}
           </div>
         </div>
 
-        {/* Galería de fotos capturadas */}
-        <div>
-          <h3 className="font-semibold mb-3">Fotos Capturadas</h3>
-          <div className="grid grid-cols-3 gap-2 max-h-96 overflow-y-auto">
+        {/* Galería de fotos mejorada */}
+        <div className="gallery-section">
+          <div className="gallery-header">
+            <h3>Galería de Fotos</h3>
+            <span className="photo-indicator">
+              {photos.length >= MIN_PHOTOS ? '✓' : photos.length} / {MIN_PHOTOS} mínimo
+            </span>
+          </div>
+          
+          <div className="photo-gallery">
             {photos.map((photo, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={photo}
-                  alt={`Foto ${index + 1}`}
-                  className="w-full h-24 object-cover rounded-lg"
-                />
+              <div key={index} className="photo-item">
+                <img src={photo} alt={`Foto ${index + 1}`} />
                 <button
                   onClick={() => deletePhoto(index)}
                   disabled={loading}
-                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="delete-photo-btn"
+                  title="Eliminar foto"
                 >
-                  ×
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
                 </button>
-                <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
-                  {index + 1}
-                </div>
+                <div className="photo-number">{index + 1}</div>
               </div>
             ))}
             {photos.length === 0 && (
-              <div className="col-span-3 text-center text-gray-500 py-8">
-                No hay fotos capturadas
+              <div className="gallery-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>
+                <p>No hay fotos capturadas</p>
+                <span>Captura al menos {MIN_PHOTOS} fotos para continuar</span>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Instrucciones */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <h3 className="font-semibold text-yellow-900 mb-2">📋 Instrucciones</h3>
-        <ul className="text-sm text-yellow-800 space-y-1">
-          <li>• Capture entre {MIN_PHOTOS} y {MAX_PHOTOS} fotos desde diferentes ángulos</li>
-          <li>• Varíe ligeramente la posición de su cabeza entre fotos</li>
-          <li>• Mantenga buena iluminación y mire a la cámara</li>
-          <li>• Evite obstrucciones en el rostro</li>
-        </ul>
+      {/* Instrucciones con diseño card */}
+      <div className="instructions-card">
+        <div className="instructions-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 16v-4M12 8h.01"/>
+          </svg>
+        </div>
+        <div className="instructions-content">
+          <h3>Recomendaciones para mejores resultados</h3>
+          <ul>
+            <li>Capture entre {MIN_PHOTOS} y {MAX_PHOTOS} fotos desde diferentes ángulos</li>
+            <li>Varíe ligeramente la posición de su rostro entre capturas</li>
+            <li>Asegure buena iluminación frontal y mire directamente a la cámara</li>
+            <li>Evite obstrucciones como lentes oscuros, gorros o mascarillas</li>
+          </ul>
+        </div>
       </div>
 
-      {/* Botones de acción */}
-      <div className="flex gap-4">
+      {/* Botones de acción con diseño mejorado */}
+      <div className="action-buttons">
         <button
           onClick={trainModel}
           disabled={!canTrain || loading}
-          className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-semibold"
+          className="btn btn-train btn-success"
         >
-          {loading ? 'Entrenando...' : '✅ Entrenar Modelo'}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          {loading ? 'Entrenando IA...' : 'Iniciar Entrenamiento'}
         </button>
         <button
           onClick={() => {
@@ -279,11 +321,425 @@ export default function FacialTraining({ usuarioId, nombreUsuario, onComplete, o
             if (onCancel) onCancel();
           }}
           disabled={loading}
-          className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400"
+          className="btn btn-cancel"
         >
           Cancelar
         </button>
       </div>
+
+      <style jsx>{`
+        .facial-training-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 2rem;
+        }
+
+        .facial-training-header {
+          text-align: center;
+          margin-bottom: 2rem;
+        }
+
+        .header-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 80px;
+          height: 80px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 20px;
+          color: white;
+          margin-bottom: 1rem;
+          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .facial-training-header h2 {
+          font-size: 1.875rem;
+          font-weight: 700;
+          color: var(--gray-900);
+          margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+          font-size: 1.125rem;
+          color: var(--gray-600);
+          margin-bottom: 1rem;
+        }
+
+        .progress-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: var(--bg-secondary);
+          padding: 0.5rem 1.5rem;
+          border-radius: var(--radius-full);
+          font-weight: 600;
+          border: 2px solid var(--gray-200);
+        }
+
+        .photo-count {
+          font-size: 1.5rem;
+          color: var(--primary-color);
+        }
+
+        .separator {
+          color: var(--gray-400);
+        }
+
+        .photo-max {
+          color: var(--gray-600);
+        }
+
+        .label {
+          font-size: 0.875rem;
+          color: var(--gray-500);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .progress-banner {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 1.5rem;
+          border-radius: var(--radius-lg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 1rem;
+          margin-bottom: 2rem;
+          box-shadow: var(--shadow-lg);
+        }
+
+        .spinner {
+          width: 24px;
+          height: 24px;
+          border: 3px solid rgba(255, 255, 255, 0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .training-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+          margin-bottom: 2rem;
+        }
+
+        @media (max-width: 968px) {
+          .training-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .camera-section {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .camera-preview {
+          position: relative;
+          background: var(--gray-900);
+          border-radius: var(--radius-lg);
+          overflow: hidden;
+          aspect-ratio: 4/3;
+          box-shadow: var(--shadow-xl);
+        }
+
+        .camera-placeholder {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          color: var(--gray-400);
+        }
+
+        .camera-placeholder svg {
+          margin-bottom: 1rem;
+          opacity: 0.5;
+        }
+
+        .camera-video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .camera-overlay {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+        }
+
+        .face-guide {
+          width: 60%;
+          height: 80%;
+          border: 3px solid rgba(102, 126, 234, 0.6);
+          border-radius: 50%;
+          box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
+        }
+
+        .processing-overlay {
+          position: absolute;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .camera-controls {
+          display: flex;
+          gap: 0.75rem;
+        }
+
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          padding: 0.875rem 1.5rem;
+          border: none;
+          border-radius: var(--radius-md);
+          font-weight: 600;
+          font-size: 0.9375rem;
+          cursor: pointer;
+          transition: var(--transition-base);
+          white-space: nowrap;
+        }
+
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .btn-capture {
+          flex: 1;
+        }
+
+        .btn-primary {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-secondary {
+          background: var(--gray-600);
+          color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+          background: var(--gray-700);
+        }
+
+        .gallery-section {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .gallery-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .gallery-header h3 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: var(--gray-900);
+        }
+
+        .photo-indicator {
+          font-size: 0.875rem;
+          color: var(--gray-600);
+          background: var(--bg-secondary);
+          padding: 0.375rem 0.875rem;
+          border-radius: var(--radius-full);
+          font-weight: 500;
+        }
+
+        .photo-gallery {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.75rem;
+          max-height: 450px;
+          overflow-y: auto;
+          padding: 0.5rem;
+          background: var(--bg-secondary);
+          border-radius: var(--radius-lg);
+        }
+
+        .photo-item {
+          position: relative;
+          aspect-ratio: 1;
+          border-radius: var(--radius-md);
+          overflow: hidden;
+          background: var(--gray-200);
+          box-shadow: var(--shadow-sm);
+          transition: var(--transition-base);
+        }
+
+        .photo-item:hover {
+          transform: scale(1.05);
+          box-shadow: var(--shadow-md);
+        }
+
+        .photo-item img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .delete-photo-btn {
+          position: absolute;
+          top: 0.375rem;
+          right: 0.375rem;
+          width: 28px;
+          height: 28px;
+          background: rgba(239, 68, 68, 0.95);
+          border: none;
+          border-radius: 50%;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: var(--transition-fast);
+        }
+
+        .photo-item:hover .delete-photo-btn {
+          opacity: 1;
+        }
+
+        .delete-photo-btn:hover {
+          background: #dc2626;
+          transform: scale(1.1);
+        }
+
+        .photo-number {
+          position: absolute;
+          bottom: 0.375rem;
+          left: 0.375rem;
+          background: rgba(0, 0, 0, 0.75);
+          color: white;
+          padding: 0.25rem 0.5rem;
+          border-radius: var(--radius-sm);
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        .gallery-empty {
+          grid-column: 1 / -1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 3rem 1rem;
+          color: var(--gray-400);
+          text-align: center;
+        }
+
+        .gallery-empty svg {
+          margin-bottom: 1rem;
+          opacity: 0.5;
+        }
+
+        .gallery-empty span {
+          font-size: 0.875rem;
+          margin-top: 0.5rem;
+        }
+
+        .instructions-card {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-radius: var(--radius-lg);
+          padding: 1.5rem;
+          display: flex;
+          gap: 1rem;
+          margin-bottom: 2rem;
+          border: 1px solid #fcd34d;
+        }
+
+        .instructions-icon {
+          flex-shrink: 0;
+          color: #d97706;
+        }
+
+        .instructions-content h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #92400e;
+          margin-bottom: 0.75rem;
+        }
+
+        .instructions-content ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          color: #78350f;
+        }
+
+        .instructions-content li {
+          padding-left: 1.5rem;
+          position: relative;
+          margin-bottom: 0.5rem;
+          font-size: 0.875rem;
+          line-height: 1.5;
+        }
+
+        .instructions-content li:before {
+          content: "→";
+          position: absolute;
+          left: 0;
+          color: #d97706;
+          font-weight: bold;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 1rem;
+        }
+
+        .btn-train {
+          flex: 1;
+        }
+
+        .btn-success {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-success:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-cancel {
+          background: white;
+          color: var(--gray-700);
+          border: 2px solid var(--gray-300);
+        }
+
+        .btn-cancel:hover:not(:disabled) {
+          background: var(--gray-50);
+          border-color: var(--gray-400);
+        }
+      `}</style>
     </div>
   );
 }
