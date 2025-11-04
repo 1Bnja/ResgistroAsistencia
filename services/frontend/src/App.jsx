@@ -7,7 +7,6 @@ import Loader from './components/Loader';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import TerminalMarcaje from './pages/TerminalMarcaje';
 import Marcajes from './pages/Marcajes';
 import AdminUsuarios from './pages/AdminUsuarios';
 import AdminHorarios from './pages/AdminHorarios';
@@ -59,15 +58,6 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/terminal"
-              element={
-                <ProtectedRoute>
-                  <TerminalMarcaje />
                 </ProtectedRoute>
               }
             />

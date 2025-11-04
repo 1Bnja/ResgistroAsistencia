@@ -59,16 +59,6 @@ const Navbar = () => {
 
           <li className="navbar-item">
             <Link
-              to="/terminal"
-              className={`navbar-link ${isActive('/terminal')}`}
-              onClick={closeMobileMenu}
-            >
-              <FaClock /> Terminal
-            </Link>
-          </li>
-
-          <li className="navbar-item">
-            <Link
               to="/marcajes"
               className={`navbar-link ${isActive('/marcajes')}`}
               onClick={closeMobileMenu}

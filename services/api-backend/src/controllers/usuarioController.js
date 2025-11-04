@@ -7,7 +7,7 @@ const axios = require('axios');
 exports.getUsuarios = async (req, res) => {
   try {
     const { activo, departamento, rol } = req.query;
-    
+
     let filtro = {};
     if (activo !== undefined) filtro.activo = activo === 'true';
     if (departamento) filtro.departamento = departamento;
@@ -138,14 +138,10 @@ exports.updateUsuario = async (req, res) => {
   }
 };
 
-// Eliminar usuario (soft delete)
+// Eliminar usuario (hard delete - eliminación física)
 exports.deleteUsuario = async (req, res) => {
   try {
-    const usuario = await Usuario.findByIdAndUpdate(
-      req.params.id,
-      { activo: false },
-      { new: true }
-    );
+    const usuario = await Usuario.findByIdAndDelete(req.params.id);
 
     if (!usuario) {
       return res.status(404).json({
@@ -156,7 +152,7 @@ exports.deleteUsuario = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Usuario desactivado exitosamente'
+      message: 'Usuario eliminado exitosamente'
     });
   } catch (error) {
     res.status(500).json({
