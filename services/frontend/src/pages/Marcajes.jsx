@@ -208,26 +208,22 @@ const Marcajes = () => {
                 {filteredMarcajes.map((marcaje) => (
                   <tr key={marcaje._id}>
                     <td className="font-bold">
-                      {format(new Date(marcaje.fecha), "dd/MM/yyyy HH:mm:ss", { locale: es })}
+                      {format(new Date(marcaje.fecha), "dd/MM/yyyy", { locale: es })} {marcaje.hora}
                     </td>
                     <td>
-                      {marcaje.usuario?.nombre} {marcaje.usuario?.apellido}
+                      {marcaje.usuarioId?.nombre || marcaje.usuario?.nombre} {marcaje.usuarioId?.apellido || marcaje.usuario?.apellido}
                     </td>
-                    <td>{marcaje.usuario?.rut}</td>
+                    <td>{marcaje.usuarioId?.rut || marcaje.usuario?.rut || 'N/A'}</td>
                     <td>
-                      {marcaje.horario?.nombre} (
-                      {marcaje.horario?.horaEntrada
-                        ? format(
-                            new Date(`2000-01-01T${marcaje.horario.horaEntrada}`),
-                            'HH:mm'
-                          )
-                        : 'N/A'}
+                      {marcaje.usuarioId?.horarioId?.nombre || marcaje.horario?.nombre || 'N/A'} (
+                      {marcaje.usuarioId?.horarioId?.horaEntrada || marcaje.horario?.horaEntrada || 'N/A'}
                       )
                     </td>
                     <td>
                       <span className={`badge ${getStatusColor(marcaje.estado)}`}>
                         {getStatusIcon(marcaje.estado)}
                         {marcaje.estado}
+                        {marcaje.minutosAtraso > 0 && ` (${marcaje.minutosAtraso} min)`}
                       </span>
                     </td>
                     <td className="text-muted">

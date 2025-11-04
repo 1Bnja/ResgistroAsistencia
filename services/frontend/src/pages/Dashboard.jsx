@@ -61,8 +61,11 @@ const Dashboard = () => {
       setLoading(true);
       const [marcajesRes, estadisticasRes] = await Promise.all([
         marcajesAPI.getHoy(),
-        marcajesAPI.getEstadisticas(),
+        marcajesAPI.getEstadisticas({ periodo: 'hoy' }),
       ]);
+
+      console.log('Marcajes recibidos:', marcajesRes.data);
+      console.log('Estadísticas recibidas:', estadisticasRes.data);
 
       setMarcajes(marcajesRes.data.marcajes || []);
       setEstadisticas(estadisticasRes.data);
@@ -188,21 +191,20 @@ const Dashboard = () => {
                 {marcajes.map((marcaje) => (
                   <tr key={marcaje._id}>
                     <td className="font-bold">
-                      {format(new Date(marcaje.fecha), 'HH:mm:ss', { locale: es })}
+                      {marcaje.hora || format(new Date(marcaje.fecha), 'HH:mm:ss', { locale: es })}
                     </td>
                     <td>
-                      {marcaje.usuario?.nombre} {marcaje.usuario?.apellido}
+                      {marcaje.usuarioId?.nombre || marcaje.usuario?.nombre} {marcaje.usuarioId?.apellido || marcaje.usuario?.apellido}
                     </td>
-                    <td>{marcaje.usuario?.rut}</td>
+                    <td>{marcaje.usuarioId?.rut || marcaje.usuario?.rut || 'N/A'}</td>
                     <td>
-                      {marcaje.horario?.horaEntrada
-                        ? format(new Date(`2000-01-01T${marcaje.horario.horaEntrada}`), 'HH:mm')
-                        : 'N/A'}
+                      {marcaje.usuarioId?.horarioId?.horaEntrada || marcaje.horario?.horaEntrada || 'N/A'}
                     </td>
                     <td>
                       <span className={`badge ${getStatusColor(marcaje.estado)}`}>
                         {getStatusIcon(marcaje.estado)}
                         {marcaje.estado}
+                        {marcaje.minutosAtraso > 0 && ` (${marcaje.minutosAtraso} min)`}
                       </span>
                     </td>
                   </tr>

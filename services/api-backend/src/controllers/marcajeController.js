@@ -2,6 +2,7 @@ const Marcaje = require('../models/Marcaje');
 const Usuario = require('../models/Usuario');
 const Horario = require('../models/Horario');
 const axios = require('axios');
+const { notificarNuevoMarcaje, notificarAtraso } = require('../services/websocketClient');
 
 // Helper: Calcular si hay atraso
 const calcularAtraso = (horaEntrada, horaMarcaje, toleranciaMinutos) => {
@@ -106,6 +107,44 @@ exports.registrarMarcajeReconocimiento = async (req, res) => {
       } catch (emailError) {
         console.error('Error al enviar notificacion:', emailError.message);
       }
+    }
+
+    // Notificar a través de WebSocket
+    const marcajeCompleto = await Marcaje.findById(marcaje._id)
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido cargo rut email',
+        populate: {
+          path: 'horarioId',
+          select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+        }
+      });
+
+    notificarNuevoMarcaje({
+      marcaje: marcajeCompleto,
+      usuario: {
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        cargo: usuario.cargo,
+        rut: usuario.rut
+      },
+      tipo: tipo || 'entrada',
+      estado,
+      minutosAtraso,
+      confianza
+    }).catch(err => console.error('Error notificando WebSocket:', err));
+
+    if (estado === 'atraso') {
+      notificarAtraso({
+        usuario: {
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          rut: usuario.rut
+        },
+        minutosAtraso,
+        hora,
+        fecha: ahora
+      }).catch(err => console.error('Error notificando atraso:', err));
     }
 
     // Devolver respuesta con datos del usuario
@@ -265,7 +304,45 @@ exports.registrarMarcaje = async (req, res) => {
       }
     }
 
-    // 9. Devolver respuesta con datos del usuario
+    // 9. Notificar a través de WebSocket
+    const marcajeCompleto = await Marcaje.findById(marcaje._id)
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido cargo rut email',
+        populate: {
+          path: 'horarioId',
+          select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+        }
+      });
+
+    notificarNuevoMarcaje({
+      marcaje: marcajeCompleto,
+      usuario: {
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        cargo: usuario.cargo,
+        rut: usuario.rut
+      },
+      tipo,
+      estado,
+      minutosAtraso,
+      confianza
+    }).catch(err => console.error('Error notificando WebSocket:', err));
+
+    if (estado === 'atraso') {
+      notificarAtraso({
+        usuario: {
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          rut: usuario.rut
+        },
+        minutosAtraso,
+        hora,
+        fecha: ahora
+      }).catch(err => console.error('Error notificando atraso:', err));
+    }
+
+    // 10. Devolver respuesta con datos del usuario
     res.status(201).json({
       success: true,
       message: `Marcaje de ${tipo} registrado exitosamente`,
@@ -312,7 +389,14 @@ exports.getMarcajes = async (req, res) => {
     }
 
     const marcajes = await Marcaje.find(filtro)
-      .populate('usuarioId', 'nombre apellido rut cargo departamento')
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido rut cargo departamento email',
+        populate: {
+          path: 'horarioId',
+          select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+        }
+      })
       .sort({ fecha: -1, hora: -1 })
       .limit(100);
 
@@ -342,8 +426,15 @@ exports.getMarcajesHoy = async (req, res) => {
     const marcajes = await Marcaje.find({
       fecha: { $gte: hoy, $lt: manana }
     })
-      .populate('usuarioId', 'nombre apellido cargo')
-      .sort({ hora: -1 });
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido cargo rut email',
+        populate: {
+          path: 'horarioId',
+          select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+        }
+      })
+      .sort({ fecha: -1, hora: -1 });
 
     res.json({
       success: true,
@@ -462,6 +553,43 @@ exports.registrarMarcajeConCredenciales = async (req, res) => {
       }
     }
 
+    // Notificar a través de WebSocket
+    const marcajeCompleto = await Marcaje.findById(marcaje._id)
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido cargo rut email',
+        populate: {
+          path: 'horarioId',
+          select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+        }
+      });
+
+    notificarNuevoMarcaje({
+      marcaje: marcajeCompleto,
+      usuario: {
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        cargo: usuario.cargo,
+        rut: usuario.rut
+      },
+      tipo,
+      estado,
+      minutosAtraso
+    }).catch(err => console.error('Error notificando WebSocket:', err));
+
+    if (estado === 'atraso') {
+      notificarAtraso({
+        usuario: {
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          rut: usuario.rut
+        },
+        minutosAtraso,
+        hora,
+        fecha: ahora
+      }).catch(err => console.error('Error notificando atraso:', err));
+    }
+
     // Devolver respuesta con datos del usuario
     res.status(201).json({
       success: true,
@@ -493,15 +621,28 @@ exports.registrarMarcajeConCredenciales = async (req, res) => {
 // Estadísticas de marcajes
 exports.getEstadisticas = async (req, res) => {
   try {
-    const { mes, anio } = req.query;
+    const { mes, anio, periodo } = req.query;
 
-    const fechaInicio = new Date(anio, mes - 1, 1);
-    const fechaFin = new Date(anio, mes, 0);
+    let fechaInicio, fechaFin;
 
+    // Si no hay mes/año, usar HOY
+    if (!mes && !anio && (!periodo || periodo === 'hoy')) {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      fechaInicio = hoy;
+      
+      fechaFin = new Date(hoy);
+      fechaFin.setDate(fechaFin.getDate() + 1);
+    } else {
+      fechaInicio = new Date(anio, mes - 1, 1);
+      fechaFin = new Date(anio, mes, 0);
+    }
+
+    // Obtener estadísticas agrupadas por estado
     const stats = await Marcaje.aggregate([
       {
         $match: {
-          fecha: { $gte: fechaInicio, $lte: fechaFin },
+          fecha: { $gte: fechaInicio, $lt: fechaFin },
           tipo: 'entrada'
         }
       },
@@ -514,9 +655,39 @@ exports.getEstadisticas = async (req, res) => {
       }
     ]);
 
+    // Calcular hora promedio de entrada
+    const marcajesHoy = await Marcaje.find({
+      fecha: { $gte: fechaInicio, $lt: fechaFin },
+      tipo: 'entrada'
+    });
+
+    let horaPromedio = '--:--';
+    if (marcajesHoy.length > 0) {
+      const totalMinutos = marcajesHoy.reduce((sum, m) => {
+        const [h, min] = m.hora.split(':').map(Number);
+        return sum + (h * 60 + min);
+      }, 0);
+      const promedioMinutos = Math.floor(totalMinutos / marcajesHoy.length);
+      const horas = Math.floor(promedioMinutos / 60);
+      const minutos = promedioMinutos % 60;
+      horaPromedio = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+    }
+
+    // Formatear respuesta
+    const puntuales = stats.find(s => s._id === 'puntual')?.total || 0;
+    const atrasos = stats.find(s => s._id === 'atraso')?.total || 0;
+    const anticipados = stats.find(s => s._id === 'anticipado')?.total || 0;
+    const totalHoy = puntuales + atrasos + anticipados;
+
     res.json({
       success: true,
-      periodo: { mes, anio },
+      periodo: periodo || { mes, anio },
+      totalHoy,
+      puntuales,
+      atrasos,
+      anticipados,
+      ausentes: 0, // TODO: Calcular ausentes
+      horaPromedio,
       data: stats
     });
   } catch (error) {
