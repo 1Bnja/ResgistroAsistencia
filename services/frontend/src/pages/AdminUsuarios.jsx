@@ -439,13 +439,14 @@ const AdminUsuarios = () => {
               Este proceso puede tomar algunos segundos...
             </p>
           </div>
-        ) : (
+        ) : trainingUser ? (
           <FacialTraining
-            usuarioNombre={trainingUser ? `${trainingUser.nombre} ${trainingUser.apellido}` : ''}
+            usuarioId={trainingUser._id}
+            nombreUsuario={`${trainingUser.nombre} ${trainingUser.apellido}`}
             onComplete={handleCompleteFacialTraining}
             onCancel={handleCloseFacialTraining}
           />
-        )}
+        ) : null}
       </Modal>
     </div>
   );
