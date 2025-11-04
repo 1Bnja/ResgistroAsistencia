@@ -374,7 +374,7 @@ exports.registrarMarcaje = async (req, res) => {
 // Obtener marcajes con filtros
 exports.getMarcajes = async (req, res) => {
   try {
-    const { usuarioId, fechaInicio, fechaFin, estado, tipo } = req.query;
+    const { usuarioId, fechaInicio, fechaFin, estado, tipo, establecimientoId } = req.query;
 
     let filtro = {};
     
@@ -388,14 +388,27 @@ exports.getMarcajes = async (req, res) => {
       if (fechaFin) filtro.fecha.$lte = new Date(fechaFin);
     }
 
+    // Si se filtra por establecimiento, primero obtener usuarios de ese establecimiento
+    if (establecimientoId) {
+      const usuariosDelEstablecimiento = await Usuario.find({ establecimientoId }).select('_id');
+      const usuarioIds = usuariosDelEstablecimiento.map(u => u._id);
+      filtro.usuarioId = { $in: usuarioIds };
+    }
+
     const marcajes = await Marcaje.find(filtro)
       .populate({
         path: 'usuarioId',
-        select: 'nombre apellido rut cargo departamento email',
-        populate: {
-          path: 'horarioId',
-          select: 'nombre horaEntrada horaSalida toleranciaMinutos'
-        }
+        select: 'nombre apellido rut cargo departamento email establecimientoId',
+        populate: [
+          {
+            path: 'horarioId',
+            select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+          },
+          {
+            path: 'establecimientoId',
+            select: 'nombre codigo'
+          }
+        ]
       })
       .sort({ fecha: -1, hora: -1 })
       .limit(100);
@@ -417,22 +430,39 @@ exports.getMarcajes = async (req, res) => {
 // Obtener marcajes de HOY
 exports.getMarcajesHoy = async (req, res) => {
   try {
+    const { establecimientoId } = req.query;
+    
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     
     const manana = new Date(hoy);
     manana.setDate(manana.getDate() + 1);
 
-    const marcajes = await Marcaje.find({
+    let filtro = {
       fecha: { $gte: hoy, $lt: manana }
-    })
+    };
+
+    // Si se filtra por establecimiento
+    if (establecimientoId) {
+      const usuariosDelEstablecimiento = await Usuario.find({ establecimientoId }).select('_id');
+      const usuarioIds = usuariosDelEstablecimiento.map(u => u._id);
+      filtro.usuarioId = { $in: usuarioIds };
+    }
+
+    const marcajes = await Marcaje.find(filtro)
       .populate({
         path: 'usuarioId',
-        select: 'nombre apellido cargo rut email',
-        populate: {
-          path: 'horarioId',
-          select: 'nombre horaEntrada horaSalida toleranciaMinutos'
-        }
+        select: 'nombre apellido cargo rut email establecimientoId',
+        populate: [
+          {
+            path: 'horarioId',
+            select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+          },
+          {
+            path: 'establecimientoId',
+            select: 'nombre codigo'
+          }
+        ]
       })
       .sort({ fecha: -1, hora: -1 });
 
@@ -621,7 +651,7 @@ exports.registrarMarcajeConCredenciales = async (req, res) => {
 // Estadísticas de marcajes
 exports.getEstadisticas = async (req, res) => {
   try {
-    const { mes, anio, periodo } = req.query;
+    const { mes, anio, periodo, establecimientoId } = req.query;
 
     let fechaInicio, fechaFin;
 
@@ -638,13 +668,23 @@ exports.getEstadisticas = async (req, res) => {
       fechaFin = new Date(anio, mes, 0);
     }
 
+    // Filtro base
+    let matchFilter = {
+      fecha: { $gte: fechaInicio, $lt: fechaFin },
+      tipo: 'entrada'
+    };
+
+    // Si se filtra por establecimiento
+    if (establecimientoId) {
+      const usuariosDelEstablecimiento = await Usuario.find({ establecimientoId }).select('_id');
+      const usuarioIds = usuariosDelEstablecimiento.map(u => u._id);
+      matchFilter.usuarioId = { $in: usuarioIds };
+    }
+
     // Obtener estadísticas agrupadas por estado
     const stats = await Marcaje.aggregate([
       {
-        $match: {
-          fecha: { $gte: fechaInicio, $lt: fechaFin },
-          tipo: 'entrada'
-        }
+        $match: matchFilter
       },
       {
         $group: {
@@ -656,10 +696,7 @@ exports.getEstadisticas = async (req, res) => {
     ]);
 
     // Calcular hora promedio de entrada
-    const marcajesHoy = await Marcaje.find({
-      fecha: { $gte: fechaInicio, $lt: fechaFin },
-      tipo: 'entrada'
-    });
+    const marcajesHoy = await Marcaje.find(matchFilter);
 
     let horaPromedio = '--:--';
     if (marcajesHoy.length > 0) {

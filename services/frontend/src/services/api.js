@@ -267,14 +267,13 @@ export const marcajesAPI = {
       } 
     };
   },
-  getHoy: async () => {
+  getHoy: async (params = {}) => {
     if (USE_MOCK) {
       await mockDelay();
       return { data: { success: true, marcajes: mockData.marcajes } };
     }
-    // Usar /marcajes sin filtro para obtener todos (últimos 100)
-    // El filtro de fecha del backend tiene problemas de zona horaria
-    const response = await api.get('/marcajes');
+    // Usar /marcajes con parámetros de filtro
+    const response = await api.get('/marcajes', { params });
     // Backend devuelve { success, count, data: marcajes[] }
     return { 
       data: { 
@@ -383,6 +382,52 @@ export const horariosAPI = {
       return { data: { success: true, message: 'Horario eliminado' } };
     }
     return api.delete(`/horarios/${id}`);
+  },
+};
+
+// ========== ESTABLECIMIENTOS ==========
+export const establecimientosAPI = {
+  getAll: async (params) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: [] } };
+    }
+    return api.get('/establecimientos', { params });
+  },
+  getById: async (id) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: {} } };
+    }
+    return api.get(`/establecimientos/${id}`);
+  },
+  create: async (establecimientoData) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: establecimientoData } };
+    }
+    return api.post('/establecimientos', establecimientoData);
+  },
+  update: async (id, establecimientoData) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: establecimientoData } };
+    }
+    return api.put(`/establecimientos/${id}`, establecimientoData);
+  },
+  delete: async (id) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, message: 'Establecimiento eliminado' } };
+    }
+    return api.delete(`/establecimientos/${id}`);
+  },
+  getUsuarios: async (id) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: [] } };
+    }
+    return api.get(`/establecimientos/${id}/usuarios`);
   },
 };
 

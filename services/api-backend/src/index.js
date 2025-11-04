@@ -11,6 +11,7 @@ const slaveGuard = require('./middleware/slaveGuard');
 const usuariosRoutes = require('./routes/usuarios');
 const marcajesRoutes = require('./routes/marcajes');
 const horariosRoutes = require('./routes/horarios');
+const establecimientosRoutes = require('./routes/establecimientos');
 
 const app = express();
 
@@ -51,6 +52,7 @@ const API_VERSION = process.env.API_VERSION || 'v1';
 app.use(`/api/${API_VERSION}/usuarios`, usuariosRoutes);
 app.use(`/api/${API_VERSION}/marcajes`, marcajesRoutes);
 app.use(`/api/${API_VERSION}/horarios`, horariosRoutes);
+app.use(`/api/${API_VERSION}/establecimientos`, establecimientosRoutes);
 
 // Ruta especial para sincronización AI (sin auth)
 const { getSyncEncodings } = require('./controllers/usuarioController');

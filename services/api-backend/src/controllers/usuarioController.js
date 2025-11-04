@@ -6,15 +6,17 @@ const axios = require('axios');
 // Obtener todos los usuarios
 exports.getUsuarios = async (req, res) => {
   try {
-    const { activo, departamento, rol } = req.query;
+    const { activo, departamento, rol, establecimientoId } = req.query;
 
     let filtro = {};
     if (activo !== undefined) filtro.activo = activo === 'true';
     if (departamento) filtro.departamento = departamento;
     if (rol) filtro.rol = rol;
+    if (establecimientoId) filtro.establecimientoId = establecimientoId;
 
     const usuarios = await Usuario.find(filtro)
       .populate('horarioId', 'nombre horaEntrada horaSalida')
+      .populate('establecimientoId', 'nombre codigo')
       .select('-encodingFacial')
       .sort({ nombre: 1 });
 
@@ -36,7 +38,8 @@ exports.getUsuarios = async (req, res) => {
 exports.getUsuarioById = async (req, res) => {
   try {
     const usuario = await Usuario.findById(req.params.id)
-      .populate('horarioId');
+      .populate('horarioId')
+      .populate('establecimientoId');
 
     if (!usuario) {
       return res.status(404).json({
@@ -64,7 +67,7 @@ exports.createUsuario = async (req, res) => {
     console.log('=== CREATE USUARIO ===');
     console.log('Body recibido:', JSON.stringify(req.body));
 
-    const { rut, email, horarioId } = req.body;
+    const { rut, email, horarioId, establecimientoId } = req.body;
 
     // Verificar RUT y email únicos
     const existe = await Usuario.findOne({ $or: [{ rut }, { email }] });
@@ -86,7 +89,19 @@ exports.createUsuario = async (req, res) => {
       });
     }
 
+    // Verificar que el establecimiento existe
+    const Establecimiento = require('../models/Establecimiento');
+    const establecimiento = await Establecimiento.findById(establecimientoId);
+    if (!establecimiento) {
+      console.log('ERROR: Establecimiento no existe:', establecimientoId);
+      return res.status(400).json({
+        success: false,
+        message: 'El establecimiento especificado no existe'
+      });
+    }
+
     console.log('Horario encontrado:', horario.nombre);
+    console.log('Establecimiento encontrado:', establecimiento.nombre);
     console.log('Creando usuario...');
 
     const usuario = await Usuario.create(req.body);
@@ -115,7 +130,9 @@ exports.updateUsuario = async (req, res) => {
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    ).populate('horarioId');
+    )
+      .populate('horarioId')
+      .populate('establecimientoId');
 
     if (!usuario) {
       return res.status(404).json({

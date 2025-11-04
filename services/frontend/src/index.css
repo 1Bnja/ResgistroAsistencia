@@ -518,6 +518,12 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+.badge-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
 .status-success {
   background-color: rgba(16, 185, 129, 0.1);
   color: #059669;
@@ -825,6 +831,16 @@ body {
 
 .dashboard-header {
   margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.dashboard-header > div:first-child {
+  flex: 1;
+  min-width: 300px;
 }
 
 .dashboard-header h1 {
@@ -837,6 +853,46 @@ body {
 
 .dashboard-header p {
   font-size: 0.9375rem;
+}
+
+/* Filtro de Establecimientos */
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+}
+
+.filter-group svg {
+  color: var(--primary-color);
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.form-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  background-color: white;
+  color: var(--gray-900);
+  cursor: pointer;
+  transition: var(--transition-base);
+  font-family: inherit;
+  outline: none;
+}
+
+.form-select:hover {
+  border-color: var(--primary-color);
+}
+
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .websocket-status {
@@ -1254,6 +1310,21 @@ a:focus-visible {
   .marcajes-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-group {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .form-select {
+    flex: 1;
+    min-width: 200px;
   }
 
   .table {
