@@ -1,17 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
-import { marcajeService } from '../services/api'
+import { marcajeService, faceRecognitionService } from '../services/api'
 import websocketService from '../services/websocket'
 import CameraCapture from './CameraCapture'
 import MarcajeSuccess from './MarcajeSuccess'
+import ManualLogin from './ManualLogin'
 import './TerminalMarcaje.css'
 
 function TerminalMarcaje() {
-  const [step, setStep] = useState('welcome') // welcome, capture, processing, success, error
+  const [step, setStep] = useState('welcome') // welcome, capture, processing, success, error, manual-login
   const [tipoMarcaje, setTipoMarcaje] = useState(null) // entrada | salida
   const [capturedImage, setCapturedImage] = useState(null)
   const [marcajeResult, setMarcajeResult] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [fallbackReason, setFallbackReason] = useState(null) // Razón para mostrar login manual
+  const [reconocimientoFallidoInfo, setReconocimientoFallidoInfo] = useState(null)
 
   const handleSelectTipo = (tipo) => {
     setTipoMarcaje(tipo)
@@ -26,16 +29,86 @@ function TerminalMarcaje() {
     setError(null)
 
     try {
-      // Aquí llamarás al servicio de IA para reconocimiento facial
-      // Por ahora simulamos con un usuarioId de prueba
-      const usuarioId = '674717ed870a50f4f5e3dfb9' // Reemplazar con el ID del usuario reconocido
+      // Intentar reconocimiento facial con IA
+      const response = await faceRecognitionService.recognizeAndMark(
+        imageData,
+        tipoMarcaje,
+        'Terminal de Entrada Principal'
+      )
 
-      // Registrar marcaje
-      const response = await marcajeService.registrarMarcaje({
-        usuarioId,
+      // Si el reconocimiento fue exitoso
+      if (response.success) {
+        setMarcajeResult(response.data)
+
+        // Enviar notificación por WebSocket
+        websocketService.send('nuevo-marcaje', {
+          marcaje: response.data.marcaje,
+          usuario: response.data.usuario,
+          tipo: tipoMarcaje,
+          estado: response.data.estado,
+          metodoMarcaje: 'automatico',
+          confianza: response.confianza
+        })
+
+        setStep('success')
+
+        // Auto-reset después de 5 segundos
+        setTimeout(() => {
+          resetTerminal()
+        }, 5000)
+      } else {
+        // Si falla el reconocimiento, verificar si requiere fallback manual
+        if (response.fallbackRequired || response.statusCode === 503 || response.statusCode === 404 || response.statusCode === 400) {
+          // Mostrar formulario de login manual
+          setFallbackReason(response.error || 'No se pudo reconocer el rostro')
+          setReconocimientoFallidoInfo({
+            mensaje: response.error,
+            confianza: response.confianza,
+            codigoEstado: response.statusCode
+          })
+          setStep('manual-login')
+        } else {
+          throw new Error(response.error || 'Error al registrar marcaje')
+        }
+      }
+    } catch (err) {
+      console.error('Error al procesar marcaje:', err)
+
+      // Si es un error de red o del servidor, ofrecer login manual
+      if (err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK' || !navigator.onLine) {
+        setFallbackReason('Servicio de reconocimiento facial no disponible')
+        setStep('manual-login')
+      } else {
+        setError(err.response?.data?.message || err.message || 'Error al procesar el marcaje')
+        setStep('error')
+
+        setTimeout(() => {
+          resetTerminal()
+        }, 4000)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRetake = () => {
+    setStep('capture')
+    setCapturedImage(null)
+    setError(null)
+  }
+
+  const handleManualLogin = async (email, password) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Registrar marcaje con credenciales
+      const response = await marcajeService.registrarMarcajeConCredenciales({
+        email,
+        password,
         tipo: tipoMarcaje,
-        imagenFacial: imageData,
-        ubicacion: 'Terminal de Entrada Principal'
+        ubicacion: 'Terminal de Entrada Principal - Login Manual',
+        imagenFacial: capturedImage
       })
 
       if (response.success) {
@@ -46,7 +119,8 @@ function TerminalMarcaje() {
           marcaje: response.data.marcaje,
           usuario: response.data.usuario,
           tipo: tipoMarcaje,
-          estado: response.data.estado
+          estado: response.data.estado,
+          metodoMarcaje: 'manual'
         })
 
         setStep('success')
@@ -59,22 +133,17 @@ function TerminalMarcaje() {
         throw new Error(response.message || 'Error al registrar marcaje')
       }
     } catch (err) {
-      console.error('Error al procesar marcaje:', err)
-      setError(err.response?.data?.message || err.message || 'Error al procesar el marcaje')
-      setStep('error')
-
-      setTimeout(() => {
-        resetTerminal()
-      }, 4000)
+      console.error('Error en login manual:', err)
+      throw err // Dejar que el componente ManualLogin maneje el error
     } finally {
       setLoading(false)
     }
   }
 
-  const handleRetake = () => {
+  const handleCancelManualLogin = () => {
     setStep('capture')
-    setCapturedImage(null)
-    setError(null)
+    setFallbackReason(null)
+    setReconocimientoFallidoInfo(null)
   }
 
   const resetTerminal = () => {
@@ -84,6 +153,8 @@ function TerminalMarcaje() {
     setMarcajeResult(null)
     setError(null)
     setLoading(false)
+    setFallbackReason(null)
+    setReconocimientoFallidoInfo(null)
   }
 
   const getCurrentTime = () => {
@@ -177,6 +248,16 @@ function TerminalMarcaje() {
             <MarcajeSuccess
               data={marcajeResult}
               tipo={tipoMarcaje}
+            />
+          )}
+
+          {step === 'manual-login' && (
+            <ManualLogin
+              tipo={tipoMarcaje}
+              fallbackReason={fallbackReason}
+              onLogin={handleManualLogin}
+              onCancel={handleCancelManualLogin}
+              loading={loading}
             />
           )}
 

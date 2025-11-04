@@ -61,11 +61,15 @@ exports.getUsuarioById = async (req, res) => {
 // Crear usuario
 exports.createUsuario = async (req, res) => {
   try {
+    console.log('=== CREATE USUARIO ===');
+    console.log('Body recibido:', JSON.stringify(req.body));
+
     const { rut, email, horarioId } = req.body;
 
     // Verificar RUT y email únicos
     const existe = await Usuario.findOne({ $or: [{ rut }, { email }] });
     if (existe) {
+      console.log('ERROR: RUT o email duplicado');
       return res.status(400).json({
         success: false,
         message: 'El RUT o email ya están registrados'
@@ -75,20 +79,27 @@ exports.createUsuario = async (req, res) => {
     // Verificar que el horario existe
     const horario = await Horario.findById(horarioId);
     if (!horario) {
+      console.log('ERROR: Horario no existe:', horarioId);
       return res.status(400).json({
         success: false,
         message: 'El horario especificado no existe'
       });
     }
 
+    console.log('Horario encontrado:', horario.nombre);
+    console.log('Creando usuario...');
+
     const usuario = await Usuario.create(req.body);
 
+    console.log('Usuario creado exitosamente:', usuario._id);
     res.status(201).json({
       success: true,
       message: 'Usuario creado exitosamente',
       data: usuario
     });
   } catch (error) {
+    console.error('ERROR creando usuario:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error al crear usuario',

@@ -41,7 +41,9 @@ const usuarioSchema = new mongoose.Schema({
   password: {
     type: String,
     required: function() {
-      return this.rol !== 'funcionario';
+      // Requerido solo para admin y superadmin
+      // Para funcionarios es opcional (para login manual en terminal)
+      return this.rol === 'admin' || this.rol === 'superadmin';
     },
     select: false // No retornar en queries por defecto
   },

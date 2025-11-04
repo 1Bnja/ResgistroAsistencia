@@ -22,14 +22,30 @@ exports.getHorarios = async (req, res) => {
 // Crear horario
 exports.createHorario = async (req, res) => {
   try {
+    console.log('=== CREATE HORARIO ===');
+    console.log('Usuario:', req.user ? req.user.email : 'NO USER');
+    console.log('Body recibido:', JSON.stringify(req.body));
+
     const horario = await Horario.create(req.body);
 
+    console.log('Horario creado exitosamente:', horario._id);
     res.status(201).json({
       success: true,
       message: 'Horario creado exitosamente',
       data: horario
     });
   } catch (error) {
+    console.error('ERROR creando horario:', error.message);
+
+    // Error de nombre duplicado
+    if (error.code === 11000 && error.keyPattern?.nombre) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ya existe un horario con ese nombre',
+        error: 'Nombre duplicado'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error al crear horario',

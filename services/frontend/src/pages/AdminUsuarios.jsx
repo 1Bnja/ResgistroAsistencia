@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { usuariosAPI } from '../services/api';
+import { usuariosAPI, horariosAPI } from '../services/api';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
@@ -9,6 +9,7 @@ import { FaPlus, FaEdit, FaTrash, FaCamera, FaUser, FaCheckCircle, FaTimesCircle
 
 const AdminUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
+  const [horarios, setHorarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -23,25 +24,46 @@ const AdminUsuarios = () => {
     apellido: '',
     rut: '',
     email: '',
+    cargo: '',
+    departamento: '',
     password: '',
-    rol: 'usuario',
+    rol: 'funcionario',
     horarioId: '',
   });
 
   useEffect(() => {
     loadUsuarios();
+    loadHorarios();
   }, []);
+
+  useEffect(() => {
+    console.log('🔄 Estado de usuarios cambió:', usuarios);
+  }, [usuarios]);
 
   const loadUsuarios = async () => {
     try {
       setLoading(true);
       const response = await usuariosAPI.getAll();
-      setUsuarios(response.data.usuarios || []);
+      console.log('Respuesta completa:', response);
+      console.log('Usuarios recibidos:', response.data.data);
+      console.log('Cantidad de usuarios:', response.data.data?.length || 0);
+      setUsuarios(response.data.data || []);
+      console.log('Estado actualizado con usuarios');
     } catch (err) {
       console.error('Error cargando usuarios:', err);
       setError('Error al cargar los usuarios');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHorarios = async () => {
+    try {
+      const response = await horariosAPI.getAll();
+      setHorarios(response.data.data || []);
+    } catch (err) {
+      console.error('Error cargando horarios:', err);
+      // No mostramos error si falla la carga de horarios
     }
   };
 
@@ -53,9 +75,11 @@ const AdminUsuarios = () => {
         apellido: user.apellido,
         rut: user.rut,
         email: user.email,
+        cargo: user.cargo || '',
+        departamento: user.departamento || '',
         password: '',
         rol: user.rol,
-        horarioId: user.horario?._id || '',
+        horarioId: user.horarioId?._id || user.horarioId || '',
       });
     } else {
       setEditingUser(null);
@@ -64,8 +88,10 @@ const AdminUsuarios = () => {
         apellido: '',
         rut: '',
         email: '',
+        cargo: '',
+        departamento: '',
         password: '',
-        rol: 'usuario',
+        rol: 'funcionario',
         horarioId: '',
       });
     }
@@ -99,12 +125,16 @@ const AdminUsuarios = () => {
         await usuariosAPI.update(editingUser._id, dataToSend);
         setSuccess('Usuario actualizado correctamente');
       } else {
-        await usuariosAPI.create(dataToSend);
+        const createResponse = await usuariosAPI.create(dataToSend);
+        console.log('Usuario creado, respuesta:', createResponse);
         setSuccess('Usuario creado correctamente');
       }
 
+      // Recargar ANTES de cerrar el modal para asegurar que se ejecuta
+      console.log('Recargando lista de usuarios...');
+      await loadUsuarios();
+      
       handleCloseModal();
-      loadUsuarios();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Error guardando usuario:', err);
@@ -168,6 +198,9 @@ const AdminUsuarios = () => {
     return <Loader message="Cargando usuarios..." />;
   }
 
+  console.log('RENDER - Usuarios actuales:', usuarios);
+  console.log('RENDER - Cantidad:', usuarios.length);
+
   return (
     <div className="admin-container">
       <div className="admin-header">
@@ -179,6 +212,13 @@ const AdminUsuarios = () => {
 
       {success && <Alert type="success" message={success} onClose={() => setSuccess('')} />}
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
+
+      {/* DEBUG INFO */}
+      <div style={{ padding: '10px', background: '#f0f0f0', marginBottom: '10px', borderRadius: '4px', fontSize: '12px' }}>
+        <strong>🐛 Debug:</strong> Total usuarios en estado: {usuarios.length} | 
+        Loading: {loading ? 'Sí' : 'No'} | 
+        IDs: {usuarios.map(u => u._id).join(', ') || 'ninguno'}
+      </div>
 
       <Card>
         {usuarios.length === 0 ? (
@@ -213,7 +253,7 @@ const AdminUsuarios = () => {
                         {usuario.rol}
                       </span>
                     </td>
-                    <td>{usuario.horario?.nombre || 'Sin asignar'}</td>
+                    <td>{usuario.horarioId?.nombre || 'Sin asignar'}</td>
                     <td>
                       {usuario.reconocimientoFacialActivo ? (
                         <span className="facial-status active" title="Reconocimiento facial activo">
@@ -313,6 +353,31 @@ const AdminUsuarios = () => {
 
           <div className="form-row">
             <div className="form-group">
+              <label>Cargo *</label>
+              <input
+                type="text"
+                name="cargo"
+                value={formData.cargo}
+                onChange={handleChange}
+                placeholder="Ej: Desarrollador"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Departamento *</label>
+              <input
+                type="text"
+                name="departamento"
+                value={formData.departamento}
+                onChange={handleChange}
+                placeholder="Ej: TI"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
               <label>Contraseña {!editingUser && '*'}</label>
               <input
                 type="password"
@@ -326,11 +391,28 @@ const AdminUsuarios = () => {
             <div className="form-group">
               <label>Rol *</label>
               <select name="rol" value={formData.rol} onChange={handleChange} required>
-                <option value="usuario">Usuario</option>
+                <option value="funcionario">Funcionario</option>
                 <option value="admin">Administrador</option>
                 <option value="superadmin">Super Administrador</option>
               </select>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Horario *</label>
+            <select name="horarioId" value={formData.horarioId} onChange={handleChange} required>
+              <option value="">Seleccionar horario</option>
+              {horarios.map((horario) => (
+                <option key={horario._id} value={horario._id}>
+                  {horario.nombre} ({horario.horaEntrada} - {horario.horaSalida})
+                </option>
+              ))}
+            </select>
+            {horarios.length === 0 && (
+              <small style={{ color: '#dc2626', display: 'block', marginTop: '0.25rem' }}>
+                No hay horarios disponibles. Por favor, cree un horario primero.
+              </small>
+            )}
           </div>
 
           <div className="form-actions">
