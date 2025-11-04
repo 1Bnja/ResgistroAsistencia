@@ -1,28 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const {
-  getUsuarios,
-  getUsuarioById,
-  createUsuario,
-  updateUsuario,
-  deleteUsuario,
-  login
-} = require('../controllers/usuarioController');
+  getHorarios,
+  createHorario,
+  updateHorario,
+  deleteHorario
+} = require('../controllers/horarioController');
 
 const { protect, authorize } = require('../middleware/auth');
 
-// Rutas públicas
-router.post('/login', login);
+// Todas las rutas de horarios requieren autenticación
+router.use(protect);
 
-// Rutas protegidas
-router.use(protect); // Todas las rutas debajo requieren autenticación
-
-router.get('/', getUsuarios);
-router.get('/:id', getUsuarioById);
+router.get('/', getHorarios);
 
 // Solo admin puede crear, actualizar, eliminar
-router.post('/', authorize('admin', 'superadmin'), createUsuario);
-router.put('/:id', authorize('admin', 'superadmin'), updateUsuario);
-router.delete('/:id', authorize('admin', 'superadmin'), deleteUsuario);
+router.post('/', authorize('admin', 'superadmin'), createHorario);
+router.put('/:id', authorize('admin', 'superadmin'), updateHorario);
+router.delete('/:id', authorize('admin', 'superadmin'), deleteHorario);
 
 module.exports = router;

@@ -41,6 +41,11 @@ const marcajeSchema = new mongoose.Schema({
     type: Number, // Nivel de confianza del reconocimiento facial (0-1)
     required: false
   },
+  metodoMarcaje: {
+    type: String,
+    enum: ['automatico', 'manual'],
+    default: 'automatico' // Por defecto asume reconocimiento facial automático
+  },
   observaciones: {
     type: String
   },

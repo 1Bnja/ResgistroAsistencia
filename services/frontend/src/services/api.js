@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // MODO MOCK - Para desarrollo sin backend
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true' || true; // Cambiar a false cuando el backend esté listo
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true' || false; // BACKEND LISTO - Modo mock desactivado
 
 // Datos mock
 const mockData = {
@@ -143,7 +143,7 @@ export const authAPI = {
       }
       throw new Error('Credenciales inválidas');
     }
-    return api.post('/auth/login', credentials);
+    return api.post('/usuarios/login', credentials);
   },
   register: async (userData) => {
     if (USE_MOCK) {

@@ -18,7 +18,7 @@ const horarioSchema = new mongoose.Schema({
     type: Number,
     default: 15 // 15 minutos de tolerancia
   },
-  diasLaborales: {
+  diasSemana: {
     type: [Number], // 1=Lunes, 2=Martes, ..., 7=Domingo
     default: [1, 2, 3, 4, 5] // Lunes a Viernes
   },

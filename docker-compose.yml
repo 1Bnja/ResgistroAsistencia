@@ -48,7 +48,6 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-      
     networks:
       - backend-network
       - dev-network

@@ -30,7 +30,7 @@ const AdminHorarios = () => {
     try {
       setLoading(true);
       const response = await horariosAPI.getAll();
-      setHorarios(response.data.horarios || []);
+      setHorarios(response.data.data || []);
     } catch (err) {
       console.error('Error cargando horarios:', err);
       setError('Error al cargar los horarios');

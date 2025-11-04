@@ -135,18 +135,72 @@ exports.registrarMarcajeReconocimiento = async (req, res) => {
   }
 };
 
-// Registrar marcaje (DESDE EL TERMINAL)
+// Registrar marcaje (DESDE EL TERMINAL) - CON RECONOCIMIENTO FACIAL
 exports.registrarMarcaje = async (req, res) => {
   try {
     const { imagenFacial, tipo, ubicacion } = req.body;
 
-    // 1. Llamar al servicio de IA (LO VEREMOS DESPUÉS)
-    // Por ahora, simulamos que recibimos el usuarioId directamente
-    const { usuarioId } = req.body; // TEMPORAL
+    // Validar datos requeridos
+    if (!imagenFacial) {
+      return res.status(400).json({
+        success: false,
+        message: 'Imagen facial es requerida'
+      });
+    }
 
-    // 2. Buscar usuario y su horario
+    if (!tipo || !['entrada', 'salida'].includes(tipo)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipo de marcaje inválido (debe ser "entrada" o "salida")'
+      });
+    }
+
+    // 1. Llamar al servicio de IA para reconocimiento facial
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:5000';
+
+    let aiResponse;
+    try {
+      aiResponse = await axios.post(`${aiServiceUrl}/recognize`, {
+        image: imagenFacial
+      }, {
+        timeout: 10000 // Timeout de 10 segundos
+      });
+    } catch (aiError) {
+      console.error('Error al llamar servicio de IA:', aiError.message);
+      return res.status(503).json({
+        success: false,
+        message: 'Servicio de reconocimiento facial no disponible. Use login manual.',
+        error: aiError.message,
+        fallbackRequired: true
+      });
+    }
+
+    // 2. Verificar resultado del reconocimiento
+    if (!aiResponse.data.success || !aiResponse.data.rostros || aiResponse.data.rostros.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No se pudo reconocer ningún rostro. Use login manual.',
+        fallbackRequired: true
+      });
+    }
+
+    const rostroReconocido = aiResponse.data.rostros[0];
+    const usuarioId = rostroReconocido.usuario_id;
+    const confianza = rostroReconocido.confianza;
+
+    // 3. Verificar nivel de confianza (mínimo 60%)
+    if (confianza < 0.6) {
+      return res.status(400).json({
+        success: false,
+        message: `Confianza muy baja (${(confianza * 100).toFixed(1)}%). Use login manual.`,
+        confianza,
+        fallbackRequired: true
+      });
+    }
+
+    // 4. Buscar usuario y su horario
     const usuario = await Usuario.findById(usuarioId).populate('horarioId');
-    
+
     if (!usuario || !usuario.activo) {
       return res.status(404).json({
         success: false,
@@ -154,11 +208,11 @@ exports.registrarMarcaje = async (req, res) => {
       });
     }
 
-    // 3. Obtener hora actual
+    // 5. Obtener hora actual
     const ahora = new Date();
     const hora = ahora.toTimeString().split(' ')[0]; // "HH:mm:ss"
-    
-    // 4. Calcular si hay atraso (solo para entradas)
+
+    // 6. Calcular si hay atraso (solo para entradas)
     let estado = 'puntual';
     let minutosAtraso = 0;
 
@@ -172,7 +226,7 @@ exports.registrarMarcaje = async (req, res) => {
       minutosAtraso = resultado.minutosAtraso;
     }
 
-    // 5. Crear marcaje
+    // 7. Crear marcaje
     const marcaje = await Marcaje.create({
       usuarioId: usuario._id,
       tipo,
@@ -181,10 +235,12 @@ exports.registrarMarcaje = async (req, res) => {
       estado,
       minutosAtraso,
       imagenMarcaje: imagenFacial,
-      ubicacion: ubicacion || 'Terminal Principal'
+      ubicacion: ubicacion || 'Terminal Principal',
+      confianzaIA: confianza,
+      metodoMarcaje: 'automatico'
     });
 
-    // 6. Si hay atraso, enviar notificación
+    // 8. Si hay atraso, enviar notificación
     if (estado === 'atraso') {
       try {
         await axios.post(`${process.env.NOTIFICATION_SERVICE_URL}/notify`, {
@@ -200,7 +256,7 @@ exports.registrarMarcaje = async (req, res) => {
             horaEsperada: usuario.horarioId.horaEntrada
           }
         });
-        
+
         marcaje.notificacionEnviada = true;
         await marcaje.save();
       } catch (emailError) {
@@ -209,16 +265,19 @@ exports.registrarMarcaje = async (req, res) => {
       }
     }
 
-    // 7. Devolver respuesta con datos del usuario
+    // 9. Devolver respuesta con datos del usuario
     res.status(201).json({
       success: true,
       message: `Marcaje de ${tipo} registrado exitosamente`,
+      metodoMarcaje: 'automatico',
+      confianza: confianza,
       data: {
         marcaje,
         usuario: {
           nombre: usuario.nombre,
           apellido: usuario.apellido,
-          cargo: usuario.cargo
+          cargo: usuario.cargo,
+          rut: usuario.rut
         },
         estado,
         minutosAtraso
@@ -226,6 +285,7 @@ exports.registrarMarcaje = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Error en registrarMarcaje:', error);
     res.status(500).json({
       success: false,
       message: 'Error al registrar marcaje',
@@ -299,11 +359,142 @@ exports.getMarcajesHoy = async (req, res) => {
   }
 };
 
+// Registrar marcaje con credenciales (FALLBACK manual cuando IA falla)
+exports.registrarMarcajeConCredenciales = async (req, res) => {
+  try {
+    const { email, password, tipo, ubicacion, imagenFacial } = req.body;
+
+    // Validar datos
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email y contraseña son requeridos'
+      });
+    }
+
+    if (!tipo || !['entrada', 'salida'].includes(tipo)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipo de marcaje inválido (debe ser "entrada" o "salida")'
+      });
+    }
+
+    // Buscar usuario con password
+    const usuario = await Usuario.findOne({ email }).select('+password').populate('horarioId');
+
+    if (!usuario) {
+      return res.status(401).json({
+        success: false,
+        message: 'Credenciales inválidas'
+      });
+    }
+
+    // Verificar password
+    const passwordValido = await usuario.comparePassword(password);
+    if (!passwordValido) {
+      return res.status(401).json({
+        success: false,
+        message: 'Credenciales inválidas'
+      });
+    }
+
+    // Verificar que el usuario esté activo
+    if (!usuario.activo) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuario desactivado. Contacte al administrador.'
+      });
+    }
+
+    // Obtener hora actual
+    const ahora = new Date();
+    const hora = ahora.toTimeString().split(' ')[0]; // "HH:mm:ss"
+
+    // Calcular si hay atraso (solo para entradas)
+    let estado = 'puntual';
+    let minutosAtraso = 0;
+
+    if (tipo === 'entrada') {
+      const resultado = calcularAtraso(
+        usuario.horarioId.horaEntrada,
+        hora,
+        usuario.horarioId.toleranciaMinutos
+      );
+      estado = resultado.estado;
+      minutosAtraso = resultado.minutosAtraso;
+    }
+
+    // Crear marcaje
+    const marcaje = await Marcaje.create({
+      usuarioId: usuario._id,
+      tipo,
+      fecha: ahora,
+      hora,
+      estado,
+      minutosAtraso,
+      imagenMarcaje: imagenFacial,
+      ubicacion: ubicacion || 'Terminal Principal - Login Manual',
+      confianzaIA: null, // No hay confianza de IA porque fue login manual
+      metodoMarcaje: 'manual' // Indicar que fue manual
+    });
+
+    // Si hay atraso, enviar notificación
+    if (estado === 'atraso') {
+      try {
+        await axios.post(`${process.env.NOTIFICATION_SERVICE_URL}/notify`, {
+          destinatario: usuario.email,
+          asunto: `Registro de atraso - ${usuario.nombre} ${usuario.apellido}`,
+          tipo: 'atraso',
+          data: {
+            nombre: usuario.nombre,
+            apellido: usuario.apellido,
+            fecha: ahora.toLocaleDateString('es-CL'),
+            hora,
+            minutosAtraso,
+            horaEsperada: usuario.horarioId.horaEntrada
+          }
+        });
+
+        marcaje.notificacionEnviada = true;
+        await marcaje.save();
+      } catch (emailError) {
+        console.error('Error al enviar notificación:', emailError.message);
+      }
+    }
+
+    // Devolver respuesta con datos del usuario
+    res.status(201).json({
+      success: true,
+      message: `Marcaje de ${tipo} registrado exitosamente`,
+      metodoMarcaje: 'manual',
+      data: {
+        marcaje,
+        usuario: {
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          cargo: usuario.cargo,
+          rut: usuario.rut
+        },
+        estado,
+        minutosAtraso
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en registrarMarcajeConCredenciales:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al registrar marcaje',
+      error: error.message
+    });
+  }
+};
+
 // Estadísticas de marcajes
 exports.getEstadisticas = async (req, res) => {
   try {
     const { mes, anio } = req.query;
-    
+
     const fechaInicio = new Date(anio, mes - 1, 1);
     const fechaFin = new Date(anio, mes, 0);
 
