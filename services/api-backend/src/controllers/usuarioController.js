@@ -226,7 +226,13 @@ exports.entrenarReconocimientoFacial = async (req, res) => {
     const { id } = req.params;
     const { imagenes } = req.body; // Array de imágenes en base64
 
+    console.log('🎯 ENTRENAR FACIAL - Inicio');
+    console.log('📦 Body keys:', Object.keys(req.body));
+    console.log('📷 Imagenes recibidas:', imagenes ? `Array de ${imagenes.length}` : 'undefined/null');
+    console.log('📷 Tipo de imagenes:', typeof imagenes, Array.isArray(imagenes));
+
     if (!imagenes || !Array.isArray(imagenes) || imagenes.length === 0) {
+      console.log('❌ Validación fallida: imagenes no es un array válido');
       return res.status(400).json({
         success: false,
         message: 'Debe proporcionar al menos una imagen'
@@ -255,9 +261,30 @@ exports.entrenarReconocimientoFacial = async (req, res) => {
       });
 
       if (response.data.success) {
+        console.log('✅ AI Training exitoso:', {
+          rostros_procesados: response.data.rostros_procesados,
+          encodings_guardados: response.data.encodings_guardados,
+          tiene_encoding: !!response.data.encoding_base64
+        });
+        
         // Actualizar flag de reconocimiento facial entrenado
         usuario.reconocimientoFacialActivo = true;
+        
+        // Guardar la primera imagen como fotoFacial para referencia
+        if (imagenes && imagenes.length > 0) {
+          usuario.fotoFacial = imagenes[0];
+          console.log('📷 fotoFacial asignada, tamaño:', imagenes[0].length, 'caracteres');
+        }
+        
+        // Si la API de IA regresa un encoding serializado, guardarlo
+        if (response.data.encoding_base64) {
+          usuario.encodingFacial = response.data.encoding_base64;
+          console.log('🧠 encodingFacial asignado, tamaño:', response.data.encoding_base64.length, 'caracteres');
+        }
+        
+        console.log('💾 Guardando usuario...');
         await usuario.save();
+        console.log('✅ Usuario guardado exitosamente');
 
         res.json({
           success: true,
@@ -274,7 +301,8 @@ exports.entrenarReconocimientoFacial = async (req, res) => {
         });
       }
     } catch (aiError) {
-      console.error('Error llamando a API-IA:', aiError.message);
+      console.error('❌ Error llamando a API-IA:', aiError.message);
+      console.error('Stack:', aiError.stack);
       res.status(503).json({
         success: false,
         message: 'Servicio de reconocimiento facial no disponible',
@@ -282,6 +310,8 @@ exports.entrenarReconocimientoFacial = async (req, res) => {
       });
     }
   } catch (error) {
+    console.error('❌ Error general en entrenamiento:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error al entrenar reconocimiento facial',
@@ -315,6 +345,37 @@ exports.getEstadoReconocimiento = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al obtener estado del reconocimiento',
+      error: error.message
+    });
+  }
+};
+
+// Sincronizar encodings con servicio AI (endpoint interno)
+exports.getSyncEncodings = async (req, res) => {
+  try {
+    // Obtener usuarios con reconocimiento facial activo que tengan encoding
+    const usuarios = await Usuario.find({
+      reconocimientoFacialActivo: true,
+      encodingFacial: { $exists: true, $ne: null, $ne: '' }
+    }).select('_id nombre apellido encodingFacial').lean();
+
+    // Formatear respuesta
+    const data = usuarios.map(u => ({
+      _id: u._id.toString(),
+      nombre: `${u.nombre} ${u.apellido}`,
+      encodingFacial: u.encodingFacial
+    }));
+
+    res.json({
+      success: true,
+      data: data,
+      total: data.length
+    });
+  } catch (error) {
+    console.error('Error en getSyncEncodings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener encodings',
       error: error.message
     });
   }

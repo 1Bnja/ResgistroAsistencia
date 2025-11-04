@@ -8,7 +8,8 @@ const {
   deleteUsuario,
   login,
   entrenarReconocimientoFacial,
-  getEstadoReconocimiento
+  getEstadoReconocimiento,
+  getSyncEncodings
 } = require('../controllers/usuarioController');
 
 const { protect, authorize } = require('../middleware/auth');

@@ -21,7 +21,7 @@ app = Flask(__name__)
 CORS(app)
 
 # URLs de servicios
-BACKEND_URL = os.environ.get('BACKEND_URL', 'http://api-backend:3000/api')
+BACKEND_URL = os.environ.get('BACKEND_URL', 'http://api-backend:3000/api/v1')
 
 # Archivo para almacenar encodings
 DATOS_ROSTROS = "rostros_conocidos.dat"
@@ -66,19 +66,24 @@ def guardar_rostros():
 def obtener_usuarios_backend():
     """Obtiene la lista de usuarios activos desde el backend."""
     try:
-        response = requests.get(
-            f"{BACKEND_URL}/usuarios",
-            params={"activo": "true"},
-            timeout=5
-        )
+        url = f"{BACKEND_URL}/sync-encodings"
+        print(f"🌐 Obteniendo usuarios de: {url}", flush=True)
+        response = requests.get(url, timeout=5)
+        print(f"📡 Status: {response.status_code}", flush=True)
+        
         if response.status_code == 200:
             data = response.json()
-            return data.get('data', [])
+            print(f"📦 Data keys: {list(data.keys())}", flush=True)
+            usuarios = data.get('data', [])
+            print(f"👥 Usuarios en response: {len(usuarios)}", flush=True)
+            return usuarios
         else:
-            print(f"Error al obtener usuarios: {response.status_code}")
+            print(f"❌ Error al obtener usuarios: {response.status_code}", flush=True)
             return []
     except Exception as e:
-        print(f"Error conectando con backend: {e}")
+        print(f"❌ Error conectando con backend: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         return []
 
 
@@ -89,8 +94,9 @@ def sincronizar_encodings():
     """
     global nombres_conocidos, encodings_conocidos
     
-    print("Sincronizando encodings con backend...")
+    print("Sincronizando encodings con backend...", flush=True)
     usuarios = obtener_usuarios_backend()
+    print(f"Usuarios obtenidos: {len(usuarios)}", flush=True)
     
     nombres_nuevos = []
     encodings_nuevos = []
@@ -107,15 +113,16 @@ def sincronizar_encodings():
                 usuario_id = str(usuario['_id'])
                 nombres_nuevos.append(usuario_id)
                 encodings_nuevos.append(encoding)
+                print(f"✅ Encoding cargado: {usuario.get('nombre')}", flush=True)
             except Exception as e:
-                print(f"Error procesando encoding de {usuario.get('nombre')}: {e}")
+                print(f"❌ Error procesando encoding de {usuario.get('nombre')}: {e}", flush=True)
     
     nombres_conocidos = nombres_nuevos
     encodings_conocidos = encodings_nuevos
     
     # Guardar en archivo local
     guardar_rostros()
-    print(f"Sincronizados {len(nombres_conocidos)} encodings")
+    print(f"✅ Sincronizados {len(nombres_conocidos)} encodings", flush=True)
 
 
 def registrar_marcaje_backend(usuario_id, confianza, tipo='entrada'):
@@ -351,15 +358,19 @@ def recognize_and_mark():
             }), 500
         
     except ValueError as e:
+        print(f"ValueError en /recognize-and-mark: {e}", flush=True)
         return jsonify({
             'success': False,
             'message': str(e)
         }), 400
     except Exception as e:
-        print(f"Error en /recognize-and-mark: {e}")
+        print(f"❌ Error en /recognize-and-mark: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'message': 'Error procesando solicitud'
+            'message': 'Error procesando solicitud',
+            'error': str(e)
         }), 500
 
 
@@ -482,11 +493,22 @@ def train():
         
         guardar_rostros()
         
+        # Serializar el primer encoding para enviarlo al backend
+        encoding_base64 = None
+        if nuevos_encodings:
+            try:
+                # Tomar el primer encoding (el más representativo)
+                encoding_bytes = pickle.dumps(nuevos_encodings[0])
+                encoding_base64 = base64.b64encode(encoding_bytes).decode('utf-8')
+            except Exception as e:
+                print(f"Error serializando encoding: {e}", flush=True)
+        
         return jsonify({
             'success': True,
             'message': 'Rostro(s) registrado(s) exitosamente',
             'rostros_procesados': rostros_procesados,
             'encodings_guardados': len(nuevos_encodings),
+            'encoding_base64': encoding_base64,
             'total_rostros_sistema': len(set(nombres_conocidos)),
             'errores': errores if errores else None
         }), 200
