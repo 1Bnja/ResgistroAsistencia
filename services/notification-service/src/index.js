@@ -1,7 +1,3 @@
-// ==========================================
-// SERVIDOR EXPRESS - NOTIFICATION SERVICE
-// Sistema de Control de Asistencia - UTalca
-// ==========================================
 
 require('dotenv').config();
 const express = require('express');
@@ -23,9 +19,6 @@ if (!fs.existsSync(logsDir)) {
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-// ==========================================
-// MIDDLEWARES
-// ==========================================
 
 // Helmet para seguridad
 app.use(helmet());
@@ -91,10 +84,6 @@ app.get('/health', (req, res) => {
 // Rutas de notificaciones
 app.use('/api/notifications', notificationRoutes);
 
-// ==========================================
-// MANEJO DE ERRORES
-// ==========================================
-
 // Ruta no encontrada
 app.use((req, res) => {
   logger.warn(`Ruta no encontrada: ${req.method} ${req.path}`);
@@ -121,9 +110,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ==========================================
-// INICIAR SERVIDOR
-// ==========================================
 
 app.listen(PORT, () => {
   logger.info('╔════════════════════════════════════════════════╗');

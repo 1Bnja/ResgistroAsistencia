@@ -1,15 +1,9 @@
-// ==========================================
-// CONTROLADOR DE NOTIFICACIONES
 // Maneja las peticiones HTTP para notificaciones
-// ==========================================
+
 
 const emailService = require('../services/emailService');
 const logger = require('../config/logger.config');
 
-/**
- * Envía notificación de registro normal
- * POST /api/notifications/registro
- */
 async function enviarRegistro(req, res) {
   try {
     const { usuario, marcaje, horario } = req.body;
@@ -61,7 +55,6 @@ async function enviarRegistro(req, res) {
 
 /**
  * Envía notificación de atraso
- * POST /api/notifications/atraso
  */
 async function enviarAtraso(req, res) {
   try {
@@ -125,7 +118,6 @@ async function enviarAtraso(req, res) {
 
 /**
  * Envía notificación de ausencia
- * POST /api/notifications/ausente
  */
 async function enviarAusente(req, res) {
   try {
@@ -190,7 +182,6 @@ async function enviarAusente(req, res) {
 
 /**
  * Envía correo de prueba
- * GET /api/notifications/test
  */
 async function enviarPrueba(req, res) {
   try {
@@ -221,7 +212,6 @@ async function enviarPrueba(req, res) {
 
 /**
  * Health check
- * GET /api/notifications/health
  */
 function healthCheck(req, res) {
   res.status(200).json({

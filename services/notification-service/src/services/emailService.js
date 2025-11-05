@@ -1,7 +1,4 @@
-// ==========================================
-// SERVICIO DE EMAIL
 // Lógica para envío de correos electrónicos
-// ==========================================
 
 const { transporter, defaultFrom, adminEmail, appName } = require('../config/email.config');
 const { renderTemplate, generatePlainText } = require('../utils/templateEngine');

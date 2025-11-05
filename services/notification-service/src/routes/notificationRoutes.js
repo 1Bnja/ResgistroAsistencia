@@ -1,7 +1,4 @@
-// ==========================================
-// RUTAS DE NOTIFICACIONES
-// Define los endpoints de la API
-// ==========================================
+//endpoints de la API
 
 const express = require('express');
 const router = express.Router();
