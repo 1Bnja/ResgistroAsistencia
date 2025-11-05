@@ -1,0 +1,95 @@
+# ==========================================
+# DOCKER COMPOSE - NOTIFICATION SERVICE
+# Para pruebas standalone del servicio
+# ==========================================
+
+version: '3.8'
+
+services:
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: asistencia-notification-service
+    hostname: notification-service
+    
+    # Variables de entorno
+    environment:
+      # SMTP Configuration
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-admnredmail98@gmail.com}
+      - SMTP_PASS=${SMTP_PASS:-dcdordhfggwgtrzn}
+      
+      # Email Configuration
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@utalca.cl}
+      - FROM_EMAIL=${FROM_EMAIL:-Sistema de Asistencia UTalca <admnredmail98@gmail.com>}
+      - FROM_NAME=${FROM_NAME:-Sistema de Asistencia UTalca}
+      
+      # App Configuration
+      - APP_NAME=${APP_NAME:-Sistema de Control de Asistencia con Reconocimiento Facial}
+      - UNIVERSITY_NAME=${UNIVERSITY_NAME:-Universidad de Talca}
+      - DEPARTMENT_NAME=${DEPARTMENT_NAME:-Administración de Redes}
+      
+      # Service Configuration
+      - PORT=3002
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      
+      # URLs
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - DASHBOARD_URL=${DASHBOARD_URL:-http://localhost/dashboard}
+      
+      # Limits
+      - LIMITE_ATRASO_MINUTOS=${LIMITE_ATRASO_MINUTOS:-30}
+    
+    # Puertos
+    ports:
+      - "3002:3002"
+    
+    # Volúmenes para logs persistentes
+    volumes:
+      - ./logs:/app/logs
+    
+    # Reinicio automático
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+# ==========================================
+# NOTAS DE USO
+# ==========================================
+#
+# Construir e iniciar:
+#   docker-compose up --build
+#
+# Iniciar en background:
+#   docker-compose up -d
+#
+# Ver logs:
+#   docker-compose logs -f
+#
+# Detener:
+#   docker-compose down
+#
+# Ver estado:
+#   docker-compose ps
+#
+# ==========================================
