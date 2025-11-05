@@ -1,7 +1,6 @@
-// ==========================================
+
 // CONFIGURACIÓN SMTP
 // Configuración del transportador de nodemailer
-// ==========================================
 
 const nodemailer = require('nodemailer');
 const logger = require('./logger.config');

@@ -1,7 +1,6 @@
-// ==========================================
 // CONFIGURACIÓN DE LOGGER
-// Winston logger para el servicio de notificaciones
-// ==========================================
+// Winston logger 
+
 
 const winston = require('winston');
 
