@@ -103,7 +103,7 @@ exports.registrarMarcajeReconocimiento = async (req, res) => {
           hora,
           estado,
           minutosAtraso,
-          ubicacion: ubicacion || 'Terminal Principal'
+          ubicacion: req.body.ubicacion || 'Terminal Reconocimiento Facial'
         },
         horario: {
           horaEntrada: usuario.horarioId.horaEntrada,
@@ -588,28 +588,47 @@ exports.registrarMarcajeConCredenciales = async (req, res) => {
       metodoMarcaje: 'manual' // Indicar que fue manual
     });
 
-    // Si hay atraso, enviar notificación
-    if (estado === 'atraso') {
-      try {
-        await axios.post(`${process.env.NOTIFICATION_SERVICE_URL}/notify`, {
-          destinatario: usuario.email,
-          asunto: `Registro de atraso - ${usuario.nombre} ${usuario.apellido}`,
-          tipo: 'atraso',
-          data: {
-            nombre: usuario.nombre,
-            apellido: usuario.apellido,
-            fecha: ahora.toLocaleDateString('es-CL'),
-            hora,
-            minutosAtraso,
-            horaEsperada: usuario.horarioId.horaEntrada
-          }
-        });
-
-        marcaje.notificacionEnviada = true;
-        await marcaje.save();
-      } catch (emailError) {
-        console.error('Error al enviar notificación:', emailError.message);
+    //enviar notificacion segun endpoint obtenido
+    try {
+      const notificationUrl = process.env.NOTIFICATION_SERVICE_URL;
+      
+      const payload = {
+        usuario: {
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          rut: usuario.rut,
+          email: usuario.email
+        },
+        marcaje: {
+          tipo: tipo,
+          fecha: ahora.toLocaleDateString('es-CL'),
+          hora: hora,
+          estado: estado,
+          minutosAtraso: minutosAtraso,
+          ubicacion: ubicacion || 'Terminal Principal - Login Manual'
+        },
+        horario: {
+          horaEntrada: usuario.horarioId.horaEntrada,
+          tolerancia: usuario.horarioId.toleranciaMinutos
+        }
+      };
+      
+      // Determinar endpoint según estado
+      let endpoint = '/api/notifications/registro';
+      if (estado === 'ausente') {
+        endpoint = '/api/notifications/ausente';
+      } else if (estado === 'atraso') {
+        endpoint = '/api/notifications/atraso';
       }
+      
+      // Enviar notificación
+      await axios.post(`${notificationUrl}${endpoint}`, payload);
+      
+      marcaje.notificacionEnviada = true;
+      await marcaje.save();
+      
+    } catch (emailError) {
+      console.error('Error al enviar notificación:', emailError.message);
     }
 
     // Notificar a través de WebSocket
