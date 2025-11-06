@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Asistencia</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; padding: 20px; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+    .header { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 30px 20px; text-align: center; }
+    .header h1 { font-size: 24px; font-weight: 600; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .content { padding: 30px 20px; }
+    .alert-box { padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #4CAF50; background-color: #f1f8e9; }
+    .alert-box h2 { color: #2e7d32; font-size: 20px; margin-bottom: 10px; }
+    .alert-box p { color: #2e7d32; }
+    .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #fafafa; border-radius: 6px; overflow: hidden; }
+    .info-table td { padding: 15px; border-bottom: 1px solid #e0e0e0; }
+    .info-table tr:last-child td { border-bottom: none; }
+    .info-table td:first-child { font-weight: 600; color: #666; width: 40%; }
+    .info-table td:last-child { color: #333; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .badge-success { background-color: #4CAF50; color: white; }
+    .badge-info { background-color: #2196F3; color: white; }
+    .footer { background-color: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0; }
+    .footer p { font-size: 12px; color: #666; margin: 5px 0; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { border-radius: 0; }
+      .content { padding: 20px 15px; }
+      .info-table td { display: block; width: 100%; }
+      .info-table td:first-child { padding-bottom: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="header">
+      <h1>{{universityName}}</h1>
+      <p>{{appName}}</p>
+    </div>
+    
+    <div class="content">
+      <div class="alert-box">
+        <h2>✅ Registro de {{tipoMarcaje}}</h2>
+        <p>Se ha registrado un nuevo marcaje en el sistema.</p>
+      </div>
+      
+      <h3 style="color: #333; margin-bottom: 15px;">Información del Funcionario</h3>
+      <table class="info-table">
+        <tr>
+          <td>Nombre Completo:</td>
+          <td><strong>{{nombre}} {{apellido}}</strong></td>
+        </tr>
+        <tr>
+          <td>RUT:</td>
+          <td>{{rut}}</td>
+        </tr>
+        <tr>
+          <td>Email:</td>
+          <td>{{email}}</td>
+        </tr>
+      </table>
+      
+      <h3 style="color: #333; margin: 20px 0 15px 0;">Detalles del Marcaje</h3>
+      <table class="info-table">
+        <tr>
+          <td>Tipo:</td>
+          <td><span class="badge badge-info">{{tipoMarcaje}}</span></td>
+        </tr>
+        <tr>
+          <td>Fecha:</td>
+          <td>{{fecha}}</td>
+        </tr>
+        <tr>
+          <td>Hora:</td>
+          <td><strong>{{hora}}</strong></td>
+        </tr>
+        <tr>
+          <td>Estado:</td>
+          <td><span class="badge badge-success">{{estado}}</span></td>
+        </tr>
+        <tr>
+          <td>Ubicación:</td>
+          <td>{{ubicacion}}</td>
+        </tr>
+      </table>
+      
+      <div style="margin-top: 25px; padding: 15px; background-color: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px;">
+        <p style="color: #1976D2; font-size: 14px; margin: 0;">
+          <strong>ℹ️ Nota:</strong> Este registro se ha procesado correctamente y está disponible en el dashboard del sistema.
+        </p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p><strong>{{appName}}</strong></p>
+      <p>{{universityName}} - {{departmentName}}</p>
+      <p style="margin-top: 15px; font-size: 11px;">
+        Este es un correo automático generado por el sistema.<br>
+        Por favor, no responda a este mensaje.
+      </p>
+      <p style="font-size: 11px; color: #999; margin-top: 10px;">
+        © {{currentYear}} {{universityName}}. Todos los derechos reservados.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

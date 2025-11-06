@@ -86,27 +86,47 @@ exports.registrarMarcajeReconocimiento = async (req, res) => {
     });
 
     // Si hay atraso, enviar notificacion
-    if (estado === 'atraso') {
-      try {
-        await axios.post(`${process.env.NOTIFICATION_SERVICE_URL}/notify`, {
-          destinatario: usuario.email,
-          asunto: `Registro de atraso - ${usuario.nombre} ${usuario.apellido}`,
-          tipo: 'atraso',
-          data: {
-            nombre: usuario.nombre,
-            apellido: usuario.apellido,
-            fecha: ahora.toLocaleDateString('es-CL'),
-            hora,
-            minutosAtraso,
-            horaEsperada: usuario.horarioId.horaEntrada
-          }
-        });
-        
-        marcaje.notificacionEnviada = true;
-        await marcaje.save();
-      } catch (emailError) {
-        console.error('Error al enviar notificacion:', emailError.message);
+     // Enviar notificación al administrador SIEMPRE
+    try {
+      const notificationUrl = process.env.NOTIFICATION_SERVICE_URL;
+      
+      const payload = {
+        usuario: {
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          rut: usuario.rut,
+          email: usuario.email
+        },
+        marcaje: {
+          tipo,
+          fecha: ahora.toLocaleDateString('es-CL'),
+          hora,
+          estado,
+          minutosAtraso,
+          ubicacion: ubicacion || 'Terminal Principal'
+        },
+        horario: {
+          horaEntrada: usuario.horarioId.horaEntrada,
+          tolerancia: usuario.horarioId.toleranciaMinutos
+        }
+      };
+      
+      // Determinar endpoint según estado
+      let endpoint = '/api/notifications/registro';
+      if (estado === 'ausente') {
+        endpoint = '/api/notifications/ausente';
+      } else if (estado === 'atraso') {
+        endpoint = '/api/notifications/atraso';
       }
+      
+      // Enviar notificación
+      await axios.post(`${notificationUrl}${endpoint}`, payload);
+      
+      marcaje.notificacionEnviada = true;
+      await marcaje.save();
+      
+    } catch (emailError) {
+      console.error('Error al enviar notificación:', emailError.message);
     }
 
     // Notificar a través de WebSocket
@@ -254,15 +274,24 @@ exports.registrarMarcaje = async (req, res) => {
     // 6. Calcular si hay atraso (solo para entradas)
     let estado = 'puntual';
     let minutosAtraso = 0;
-
+    const LIMITE_ATRASO = parseInt(process.env.LIMITE_ATRASO_MINUTOS) || 30;
+    
     if (tipo === 'entrada') {
       const resultado = calcularAtraso(
         usuario.horarioId.horaEntrada,
         hora,
         usuario.horarioId.toleranciaMinutos
       );
-      estado = resultado.estado;
       minutosAtraso = resultado.minutosAtraso;
+      
+      // Determinar estado: puntual, atraso o ausente
+      if (minutosAtraso <= 0) {
+        estado = 'puntual';
+      } else if (minutosAtraso <= LIMITE_ATRASO) {
+        estado = 'atraso';
+      } else {
+        estado = 'ausente';
+      }
     }
 
     // 7. Crear marcaje
