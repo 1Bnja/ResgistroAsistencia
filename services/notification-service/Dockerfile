@@ -21,10 +21,10 @@ FROM base AS dependencies
 COPY package*.json ./
 
 # Instalar dependencias de producción
-RUN npm ci --only=production --ignore-scripts
+RUN npm install --only=production --ignore-scripts
 
 # Instalar dependencias de desarrollo (para build si es necesario)
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 
 # Production
 FROM base AS production
