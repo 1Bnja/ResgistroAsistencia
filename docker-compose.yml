@@ -25,6 +25,7 @@ services:
       ROLE: slave
       # Si dispones de una replica de lectura, puedes definir MONGODB_READ_URI en tu entorno
       MONGODB_READ_URI: ${MONGODB_READ_URI:-}
+      REDIS_URL: ${REDIS_URL:-redis://default:khUgSYRtKVYTlZlVaQBg5YLLXD5IGDz2@redis-14938.c308.sa-east-1-1.ec2.redns.redis-cloud.com:14938}
     networks:
       - backend-network
       - dev-network
@@ -48,6 +49,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      REDIS_URL: ${REDIS_URL:-redis://default:khUgSYRtKVYTlZlVaQBg5YLLXD5IGDz2@redis-14938.c308.sa-east-1-1.ec2.redns.redis-cloud.com:14938}
     networks:
       - backend-network
       - dev-network
