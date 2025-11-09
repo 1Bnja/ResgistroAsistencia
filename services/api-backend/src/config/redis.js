@@ -5,6 +5,15 @@
 
 const Redis = require('ioredis');
 
+// Importar solo si metrics está disponible (evitar error en entorno sin prom-client)
+let recordRedisOperation;
+try {
+  ({ recordRedisOperation } = require('../middleware/metrics'));
+} catch (err) {
+  // Si metrics no está disponible, usar función vacía
+  recordRedisOperation = () => {};
+}
+
 class RedisClient {
   constructor() {
     this.client = null;
@@ -88,10 +97,12 @@ class RedisClient {
 
     try {
       const data = await this.client.get(key);
+      recordRedisOperation('get', data ? 'success' : 'miss');
       if (!data) return null;
 
       return JSON.parse(data);
     } catch (error) {
+      recordRedisOperation('get', 'error');
       console.error(`Error obteniendo cache [${key}]:`, error.message);
       return null;
     }
@@ -110,8 +121,10 @@ class RedisClient {
     try {
       const serialized = JSON.stringify(value);
       await this.client.setex(key, ttl, serialized);
+      recordRedisOperation('set', 'success');
       return true;
     } catch (error) {
+      recordRedisOperation('set', 'error');
       console.error(`Error guardando cache [${key}]:`, error.message);
       return false;
     }
@@ -128,8 +141,10 @@ class RedisClient {
     try {
       const keyArray = Array.isArray(keys) ? keys : [keys];
       const deleted = await this.client.del(...keyArray);
+      recordRedisOperation('del', 'success');
       return deleted;
     } catch (error) {
+      recordRedisOperation('del', 'error');
       console.error('Error eliminando cache:', error.message);
       return 0;
     }
