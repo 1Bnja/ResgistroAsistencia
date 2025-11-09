@@ -1,0 +1,25 @@
+{
+  "name": "test-email-smtp-utalca",
+  "version": "1.0.0",
+  "description": "Script de prueba para verificar configuración SMTP - Sistema de Asistencia UTalca",
+  "main": "test-email.js",
+  "scripts": {
+    "test": "node test-email.js",
+    "test:env": "node test-email-env.js",
+    "start": "node test-email.js"
+  },
+  "keywords": [
+    "smtp",
+    "email",
+    "test",
+    "nodemailer",
+    "utalca",
+    "asistencia"
+  ],
+  "author": "Universidad de Talca - Administración de Redes",
+  "license": "MIT",
+  "dependencies": {
+    "nodemailer": "^6.9.7",
+    "dotenv": "^16.3.1"
+  }
+}

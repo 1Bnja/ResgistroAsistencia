@@ -7,14 +7,14 @@ import Loader from './components/Loader';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import TerminalMarcaje from './pages/TerminalMarcaje';
 import Marcajes from './pages/Marcajes';
 import AdminUsuarios from './pages/AdminUsuarios';
 import AdminHorarios from './pages/AdminHorarios';
+import AdminEstablecimientos from './pages/AdminEstablecimientos';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+const ProtectedRoute = ({ children, requireAdmin = false, requireSuperAdmin = false }) => {
+  const { isAuthenticated, isAdmin, user, loading } = useAuth();
 
   if (loading) {
     return <Loader message="Verificando autenticación..." />;
@@ -22,6 +22,10 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requireSuperAdmin && user?.rol !== 'superadmin') {
+    return <Navigate to="/" replace />;
   }
 
   if (requireAdmin && !isAdmin()) {
@@ -64,15 +68,6 @@ function AppRoutes() {
             />
 
             <Route
-              path="/terminal"
-              element={
-                <ProtectedRoute>
-                  <TerminalMarcaje />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
               path="/marcajes"
               element={
                 <ProtectedRoute>
@@ -96,6 +91,15 @@ function AppRoutes() {
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminHorarios />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/establecimientos"
+              element={
+                <ProtectedRoute requireSuperAdmin>
+                  <AdminEstablecimientos />
                 </ProtectedRoute>
               }
             />

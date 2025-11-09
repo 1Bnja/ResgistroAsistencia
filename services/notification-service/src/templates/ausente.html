@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ausencia Registrada</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; padding: 20px; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+    .header { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white; padding: 30px 20px; text-align: center; }
+    .header h1 { font-size: 24px; font-weight: 600; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .content { padding: 30px 20px; }
+    .alert-box { padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #f44336; background-color: #ffebee; }
+    .alert-box h2 { color: #c62828; font-size: 20px; margin-bottom: 10px; }
+    .alert-box p { color: #c62828; }
+    .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #fafafa; border-radius: 6px; overflow: hidden; }
+    .info-table td { padding: 15px; border-bottom: 1px solid #e0e0e0; }
+    .info-table tr:last-child td { border-bottom: none; }
+    .info-table td:first-child { font-weight: 600; color: #666; width: 40%; }
+    .info-table td:last-child { color: #333; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .badge-danger { background-color: #f44336; color: white; }
+    .badge-info { background-color: #2196F3; color: white; }
+    .highlight-box { background-color: #ffebee; border: 2px solid #f44336; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+    .highlight-box .number { font-size: 48px; font-weight: 700; color: #f44336; margin: 10px 0; }
+    .highlight-box .label { font-size: 16px; color: #c62828; font-weight: 600; }
+    .highlight-box .sublabel { font-size: 14px; color: #666; margin-top: 10px; }
+    .footer { background-color: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0; }
+    .footer p { font-size: 12px; color: #666; margin: 5px 0; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { border-radius: 0; }
+      .content { padding: 20px 15px; }
+      .info-table td { display: block; width: 100%; }
+      .info-table td:first-child { padding-bottom: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="header">
+      <h1>{{universityName}}</h1>
+      <p>{{appName}}</p>
+    </div>
+    
+    <div class="content">
+      <div class="alert-box">
+        <h2>❌ Ausencia Registrada</h2>
+        <p>Se ha registrado una AUSENCIA debido a que el atraso superó el límite establecido.</p>
+      </div>
+      
+      <div class="highlight-box">
+        <div class="label">Minutos de Atraso</div>
+        <div class="number">{{minutosAtraso}}</div>
+        <div class="sublabel">
+          Límite permitido: <strong>{{limiteAtraso}} minutos</strong><br>
+          Exceso: <strong style="color: #f44336;">{{excesoAtraso}} minutos</strong>
+        </div>
+        <p style="color: #666; font-size: 14px; margin-top: 15px;">
+          Hora esperada: <strong>{{horaEsperada}}</strong> | 
+          Hora de llegada: <strong>{{hora}}</strong>
+        </p>
+      </div>
+      
+      <h3 style="color: #333; margin-bottom: 15px;">Información del Funcionario</h3>
+      <table class="info-table">
+        <tr>
+          <td>Nombre Completo:</td>
+          <td><strong>{{nombre}} {{apellido}}</strong></td>
+        </tr>
+        <tr>
+          <td>RUT:</td>
+          <td>{{rut}}</td>
+        </tr>
+        <tr>
+          <td>Email:</td>
+          <td>{{email}}</td>
+        </tr>
+      </table>
+      
+      <h3 style="color: #333; margin: 20px 0 15px 0;">Detalles del Marcaje</h3>
+      <table class="info-table">
+        <tr>
+          <td>Tipo:</td>
+          <td><span class="badge badge-info">{{tipoMarcaje}}</span></td>
+        </tr>
+        <tr>
+          <td>Fecha:</td>
+          <td>{{fecha}}</td>
+        </tr>
+        <tr>
+          <td>Hora de llegada:</td>
+          <td><strong>{{hora}}</strong></td>
+        </tr>
+        <tr>
+          <td>Hora esperada:</td>
+          <td><strong>{{horaEsperada}}</strong></td>
+        </tr>
+        <tr>
+          <td>Estado:</td>
+          <td><span class="badge badge-danger">AUSENTE</span></td>
+        </tr>
+        <tr>
+          <td>Minutos de atraso:</td>
+          <td><strong style="color: #f44336;">{{minutosAtraso}} minutos</strong></td>
+        </tr>
+        <tr>
+          <td>Límite de atraso:</td>
+          <td>{{limiteAtraso}} minutos</td>
+        </tr>
+        <tr>
+          <td>Exceso:</td>
+          <td><strong style="color: #f44336;">{{excesoAtraso}} minutos</strong></td>
+        </tr>
+        <tr>
+          <td>Tolerancia:</td>
+          <td>{{tolerancia}} minutos</td>
+        </tr>
+        <tr>
+          <td>Ubicación:</td>
+          <td>{{ubicacion}}</td>
+        </tr>
+      </table>
+      
+      <div style="margin-top: 25px; padding: 15px; background-color: #ffebee; border-left: 4px solid #f44336; border-radius: 4px;">
+        <p style="color: #c62828; font-size: 14px; margin: 0;">
+          <strong>🚨 Importante:</strong> El funcionario ha superado el límite de {{limiteAtraso}} minutos de atraso permitido y se ha registrado como AUSENTE. Esta información ha sido documentada en el sistema.
+        </p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p><strong>{{appName}}</strong></p>
+      <p>{{universityName}} - {{departmentName}}</p>
+      <p style="margin-top: 15px; font-size: 11px;">
+        Este es un correo automático generado por el sistema.<br>
+        Por favor, no responda a este mensaje.
+      </p>
+      <p style="font-size: 11px; color: #999; margin-top: 10px;">
+        © {{currentYear}} {{universityName}}. Todos los derechos reservados.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

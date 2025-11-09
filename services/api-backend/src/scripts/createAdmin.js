@@ -15,6 +15,7 @@ const usuarioSchema = new mongoose.Schema({
   rol: String,
   password: String,
   reconocimientoFacialActivo: Boolean,
+  establecimientoId: mongoose.Schema.Types.ObjectId,
   horarioId: mongoose.Schema.Types.ObjectId,
   activo: Boolean
 }, { timestamps: true });
@@ -28,8 +29,22 @@ const horarioSchema = new mongoose.Schema({
   activo: Boolean
 }, { timestamps: true });
 
+const establecimientoSchema = new mongoose.Schema({
+  nombre: String,
+  codigo: String,
+  direccion: String,
+  comuna: String,
+  region: String,
+  telefono: String,
+  email: String,
+  director: String,
+  tipo: String,
+  activo: Boolean
+}, { timestamps: true });
+
 const Usuario = mongoose.model('Usuario', usuarioSchema);
 const Horario = mongoose.model('Horario', horarioSchema);
+const Establecimiento = mongoose.model('Establecimiento', establecimientoSchema);
 
 async function createAdminUser() {
   try {
@@ -42,6 +57,27 @@ async function createAdminUser() {
     if (adminExistente) {
       console.log('⚠️  El usuario admin ya existe');
       process.exit(0);
+    }
+
+    // Crear o buscar establecimiento por defecto
+    console.log('🔄 Verificando establecimiento por defecto...');
+    let establecimiento = await Establecimiento.findOne({ codigo: 'EST001' });
+    if (!establecimiento) {
+      establecimiento = await Establecimiento.create({
+        nombre: 'Establecimiento Principal',
+        codigo: 'EST001',
+        direccion: 'Dirección Principal',
+        comuna: 'Santiago',
+        region: 'Metropolitana',
+        telefono: '+56 2 2345 6789',
+        email: 'contacto@establecimiento.cl',
+        director: 'Director Principal',
+        tipo: 'basica',
+        activo: true
+      });
+      console.log('✅ Establecimiento creado:', establecimiento.nombre);
+    } else {
+      console.log('✅ Establecimiento encontrado:', establecimiento.nombre);
     }
 
     // Crear horario por defecto
@@ -69,9 +105,10 @@ async function createAdminUser() {
       email: 'admin@asistencia.cl',
       cargo: 'Administrador del Sistema',
       departamento: 'TI',
-      rol: 'admin',
+      rol: 'superadmin',
       password: hashedPassword,
       reconocimientoFacialActivo: false,
+      establecimientoId: establecimiento._id,
       horarioId: horario._id,
       activo: true
     });

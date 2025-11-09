@@ -258,14 +258,29 @@ export const marcajesAPI = {
       await mockDelay();
       return { data: { success: true, data: mockData.marcajes } };
     }
-    return api.get('/marcajes', { params });
+    const response = await api.get('/marcajes', { params });
+    // Backend devuelve { success, count, data: marcajes[] }
+    return { 
+      data: { 
+        success: response.data.success, 
+        marcajes: response.data.data || [] 
+      } 
+    };
   },
-  getHoy: async () => {
+  getHoy: async (params = {}) => {
     if (USE_MOCK) {
       await mockDelay();
-      return { data: { success: true, data: mockData.marcajes } };
+      return { data: { success: true, marcajes: mockData.marcajes } };
     }
-    return api.get('/marcajes/hoy');
+    // Usar /marcajes con parámetros de filtro
+    const response = await api.get('/marcajes', { params });
+    // Backend devuelve { success, count, data: marcajes[] }
+    return { 
+      data: { 
+        success: response.data.success, 
+        marcajes: response.data.data || [] 
+      } 
+    };
   },
   registrar: async (marcajeData) => {
     if (USE_MOCK) {
@@ -297,7 +312,36 @@ export const marcajesAPI = {
         }
       };
     }
-    return api.get('/marcajes/estadisticas', { params });
+    
+    // Obtener todos los marcajes y calcular estadísticas en el cliente
+    const marcajesResponse = await api.get('/marcajes');
+    const marcajes = marcajesResponse.data.data || [];
+    
+    // Filtrar marcajes de hoy (fecha local del navegador)
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const marcajesHoy = marcajes.filter(m => {
+      const fechaMarcaje = new Date(m.fecha);
+      fechaMarcaje.setHours(0, 0, 0, 0);
+      return fechaMarcaje.getTime() === hoy.getTime();
+    });
+    
+    // Calcular estadísticas
+    const puntuales = marcajesHoy.filter(m => m.estado === 'puntual' && m.tipo === 'entrada').length;
+    const atrasos = marcajesHoy.filter(m => m.estado === 'atraso' && m.tipo === 'entrada').length;
+    const anticipados = marcajesHoy.filter(m => m.estado === 'anticipado' && m.tipo === 'entrada').length;
+    
+    return {
+      data: {
+        success: true,
+        totalHoy: marcajesHoy.length,
+        puntuales,
+        atrasos,
+        anticipados,
+        ausentes: 0,
+        horaPromedio: '--:--'
+      }
+    };
   },
 };
 
@@ -338,6 +382,52 @@ export const horariosAPI = {
       return { data: { success: true, message: 'Horario eliminado' } };
     }
     return api.delete(`/horarios/${id}`);
+  },
+};
+
+// ========== ESTABLECIMIENTOS ==========
+export const establecimientosAPI = {
+  getAll: async (params) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: [] } };
+    }
+    return api.get('/establecimientos', { params });
+  },
+  getById: async (id) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: {} } };
+    }
+    return api.get(`/establecimientos/${id}`);
+  },
+  create: async (establecimientoData) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: establecimientoData } };
+    }
+    return api.post('/establecimientos', establecimientoData);
+  },
+  update: async (id, establecimientoData) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: establecimientoData } };
+    }
+    return api.put(`/establecimientos/${id}`, establecimientoData);
+  },
+  delete: async (id) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, message: 'Establecimiento eliminado' } };
+    }
+    return api.delete(`/establecimientos/${id}`);
+  },
+  getUsuarios: async (id) => {
+    if (USE_MOCK) {
+      await mockDelay();
+      return { data: { success: true, data: [] } };
+    }
+    return api.get(`/establecimientos/${id}/usuarios`);
   },
 };
 

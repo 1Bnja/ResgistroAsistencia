@@ -24,7 +24,7 @@ services:
       PORT: 3000
       ROLE: slave
       # Si dispones de una replica de lectura, puedes definir MONGODB_READ_URI en tu entorno
-      MONGODB_READ_URI: ${MONGODB_READ_URI}
+      MONGODB_READ_URI: ${MONGODB_READ_URI:-}
     networks:
       - backend-network
       - dev-network
@@ -65,7 +65,7 @@ services:
       dockerfile: Dockerfile
     container_name: ai-service
     ports:
-      - "5000:5000"
+      - "5050:5000"
     environment:
       BACKEND_URL: http://api-backend:3000/api/v1
       FLASK_DEBUG: "False"
@@ -130,6 +130,42 @@ services:
       - frontend-network
       - backend-network
     restart: unless-stopped
+
+  notification-service:
+    build: ./services/notification-service
+    container_name: asistencia-notification-service
+    hostname: notification-service
+    environment:
+      # SMTP
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=admnredmail98@gmail.com
+      - SMTP_PASS=roacrmpfbasqyeaf
+      # Emails
+      - ADMIN_EMAIL=admin@utalca.cl
+      - FROM_EMAIL=Sistema de Asistencia UTalca <admnredmail98@gmail.com>
+      # App
+      - APP_NAME=Sistema de Control de Asistencia con Reconocimiento Facial
+      - UNIVERSITY_NAME=Universidad de Talca
+      - DEPARTMENT_NAME=Administración de Redes
+      # Service
+      - PORT=3003
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      # Limits
+      - LIMITE_ATRASO_MINUTOS=30
+    ports:
+      - "3003:3003"
+    networks:
+      - backend-network
+    volumes:
+      - ./services/notification-service/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   frontend-network:

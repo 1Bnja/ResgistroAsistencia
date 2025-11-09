@@ -57,6 +57,11 @@ const usuarioSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  establecimientoId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Establecimiento',
+    required: true
+  },
   horarioId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Horario',

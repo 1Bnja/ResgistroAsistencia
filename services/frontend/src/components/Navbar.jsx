@@ -10,6 +10,7 @@ import {
   FaSignOutAlt,
   FaBars,
   FaTimes,
+  FaSchool,
 } from 'react-icons/fa';
 
 const Navbar = () => {
@@ -59,16 +60,6 @@ const Navbar = () => {
 
           <li className="navbar-item">
             <Link
-              to="/terminal"
-              className={`navbar-link ${isActive('/terminal')}`}
-              onClick={closeMobileMenu}
-            >
-              <FaClock /> Terminal
-            </Link>
-          </li>
-
-          <li className="navbar-item">
-            <Link
               to="/marcajes"
               className={`navbar-link ${isActive('/marcajes')}`}
               onClick={closeMobileMenu}
@@ -98,6 +89,18 @@ const Navbar = () => {
                   <FaCalendarAlt /> Horarios
                 </Link>
               </li>
+
+              {user?.rol === 'superadmin' && (
+                <li className="navbar-item">
+                  <Link
+                    to="/admin/establecimientos"
+                    className={`navbar-link ${isActive('/admin/establecimientos')}`}
+                    onClick={closeMobileMenu}
+                  >
+                    <FaSchool /> Establecimientos
+                  </Link>
+                </li>
+              )}
             </>
           )}
 

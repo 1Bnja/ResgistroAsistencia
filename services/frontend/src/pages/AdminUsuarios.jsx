@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { usuariosAPI, horariosAPI } from '../services/api';
+import { usuariosAPI, horariosAPI, establecimientosAPI } from '../services/api';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
@@ -10,6 +10,7 @@ import { FaPlus, FaEdit, FaTrash, FaCamera, FaUser, FaCheckCircle, FaTimesCircle
 const AdminUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [horarios, setHorarios] = useState([]);
+  const [establecimientos, setEstablecimientos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -29,11 +30,13 @@ const AdminUsuarios = () => {
     password: '',
     rol: 'funcionario',
     horarioId: '',
+    establecimientoId: '',
   });
 
   useEffect(() => {
     loadUsuarios();
     loadHorarios();
+    loadEstablecimientos();
   }, []);
 
   useEffect(() => {
@@ -67,6 +70,16 @@ const AdminUsuarios = () => {
     }
   };
 
+  const loadEstablecimientos = async () => {
+    try {
+      const response = await establecimientosAPI.getAll({ activo: true });
+      setEstablecimientos(response.data.data || []);
+    } catch (err) {
+      console.error('Error cargando establecimientos:', err);
+      // No mostramos error si falla la carga de establecimientos
+    }
+  };
+
   const handleOpenModal = (user = null) => {
     if (user) {
       setEditingUser(user);
@@ -80,6 +93,7 @@ const AdminUsuarios = () => {
         password: '',
         rol: user.rol,
         horarioId: user.horarioId?._id || user.horarioId || '',
+        establecimientoId: user.establecimientoId?._id || user.establecimientoId || '',
       });
     } else {
       setEditingUser(null);
@@ -93,6 +107,7 @@ const AdminUsuarios = () => {
         password: '',
         rol: 'funcionario',
         horarioId: '',
+        establecimientoId: '',
       });
     }
     setModalOpen(true);
@@ -232,6 +247,7 @@ const AdminUsuarios = () => {
                   <th>RUT</th>
                   <th>Email</th>
                   <th>Rol</th>
+                  <th>Establecimiento</th>
                   <th>Horario</th>
                   <th>Reconocimiento</th>
                   <th>Acciones</th>
@@ -252,6 +268,15 @@ const AdminUsuarios = () => {
                       <span className={`badge badge-${usuario.rol === 'admin' ? 'primary' : 'secondary'}`}>
                         {usuario.rol}
                       </span>
+                    </td>
+                    <td>
+                      {usuario.establecimientoId?.nombre ? (
+                        <span className="badge badge-info" title={`Código: ${usuario.establecimientoId?.codigo || 'N/A'}`}>
+                          {usuario.establecimientoId.nombre}
+                        </span>
+                      ) : (
+                        <span className="badge badge-secondary">Sin asignar</span>
+                      )}
                     </td>
                     <td>{usuario.horarioId?.nombre || 'Sin asignar'}</td>
                     <td>
@@ -398,21 +423,39 @@ const AdminUsuarios = () => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label>Horario *</label>
-            <select name="horarioId" value={formData.horarioId} onChange={handleChange} required>
-              <option value="">Seleccionar horario</option>
-              {horarios.map((horario) => (
-                <option key={horario._id} value={horario._id}>
-                  {horario.nombre} ({horario.horaEntrada} - {horario.horaSalida})
-                </option>
-              ))}
-            </select>
-            {horarios.length === 0 && (
-              <small style={{ color: '#dc2626', display: 'block', marginTop: '0.25rem' }}>
-                No hay horarios disponibles. Por favor, cree un horario primero.
-              </small>
-            )}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Establecimiento *</label>
+              <select name="establecimientoId" value={formData.establecimientoId} onChange={handleChange} required>
+                <option value="">Seleccionar establecimiento</option>
+                {establecimientos.map((establecimiento) => (
+                  <option key={establecimiento._id} value={establecimiento._id}>
+                    {establecimiento.nombre} ({establecimiento.codigo})
+                  </option>
+                ))}
+              </select>
+              {establecimientos.length === 0 && (
+                <small style={{ color: '#dc2626', display: 'block', marginTop: '0.25rem' }}>
+                  No hay establecimientos disponibles. Por favor, cree un establecimiento primero.
+                </small>
+              )}
+            </div>
+            <div className="form-group">
+              <label>Horario *</label>
+              <select name="horarioId" value={formData.horarioId} onChange={handleChange} required>
+                <option value="">Seleccionar horario</option>
+                {horarios.map((horario) => (
+                  <option key={horario._id} value={horario._id}>
+                    {horario.nombre} ({horario.horaEntrada} - {horario.horaSalida})
+                  </option>
+                ))}
+              </select>
+              {horarios.length === 0 && (
+                <small style={{ color: '#dc2626', display: 'block', marginTop: '0.25rem' }}>
+                  No hay horarios disponibles. Por favor, cree un horario primero.
+                </small>
+              )}
+            </div>
           </div>
 
           <div className="form-actions">

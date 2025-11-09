@@ -3,7 +3,7 @@ const Horario = require('../models/Horario');
 // Obtener todos los horarios
 exports.getHorarios = async (req, res) => {
   try {
-    const horarios = await Horario.find({ activo: true }).sort({ nombre: 1 });
+    const horarios = await Horario.find().sort({ nombre: 1 });
 
     res.json({
       success: true,
@@ -84,14 +84,10 @@ exports.updateHorario = async (req, res) => {
   }
 };
 
-// Eliminar horario
+// Eliminar horario (hard delete - eliminación física)
 exports.deleteHorario = async (req, res) => {
   try {
-    const horario = await Horario.findByIdAndUpdate(
-      req.params.id,
-      { activo: false },
-      { new: true }
-    );
+    const horario = await Horario.findByIdAndDelete(req.params.id);
 
     if (!horario) {
       return res.status(404).json({
@@ -102,7 +98,7 @@ exports.deleteHorario = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Horario desactivado exitosamente'
+      message: 'Horario eliminado exitosamente'
     });
   } catch (error) {
     res.status(500).json({
