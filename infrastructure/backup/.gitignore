@@ -1,0 +1,11 @@
+# Variables de entorno
+.env
+
+# Directorios de backup
+backups/
+*.tar.gz
+*.log
+
+# Archivos temporales
+*.tmp
+tmp/

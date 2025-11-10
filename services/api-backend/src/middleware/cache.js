@@ -4,6 +4,7 @@
  */
 
 const redis = require('../config/redis');
+const { recordCacheHit, recordCacheMiss } = require('./metrics');
 
 /**
  * Middleware de cache
@@ -48,6 +49,10 @@ const cache = (ttl = 300, keyGenerator = null) => {
       if (cachedData) {
         console.log(`💾 Cache HIT: ${cacheKey}`);
         
+        // Registrar métrica de cache hit
+        const route = req.route?.path || req.path || 'unknown';
+        recordCacheHit(route);
+        
         // Devolver data cacheada
         return res.status(200).json({
           ...cachedData,
@@ -57,6 +62,10 @@ const cache = (ttl = 300, keyGenerator = null) => {
       }
 
       console.log(`🔍 Cache MISS: ${cacheKey}`);
+
+      // Registrar métrica de cache miss
+      const route = req.route?.path || req.path || 'unknown';
+      recordCacheMiss(route);
 
       // Interceptar res.json para cachear la respuesta
       const originalJson = res.json.bind(res);
