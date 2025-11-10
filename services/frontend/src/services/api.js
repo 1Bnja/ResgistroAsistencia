@@ -222,6 +222,13 @@ export const usuariosAPI = {
     });
   },
   entrenarFacial: async (id, imagenes) => {
+    console.log('🌐 API SERVICE - entrenarFacial called');
+    console.log('🌐 API SERVICE - userId:', id);
+    console.log('🌐 API SERVICE - imagenes type:', typeof imagenes);
+    console.log('🌐 API SERVICE - imagenes is array:', Array.isArray(imagenes));
+    console.log('🌐 API SERVICE - imagenes length:', imagenes?.length);
+    console.log('🌐 API SERVICE - First image preview:', imagenes?.[0]?.substring(0, 100));
+    
     if (USE_MOCK) {
       await mockDelay(2000);
       return { 
@@ -235,7 +242,15 @@ export const usuariosAPI = {
         } 
       };
     }
-    return api.post(`/usuarios/${id}/entrenar-facial`, { imagenes });
+    
+    const payload = { imagenes };
+    console.log('🌐 API SERVICE - Sending payload:', {
+      endpoint: `/usuarios/${id}/entrenar-facial`,
+      payloadKeys: Object.keys(payload),
+      imagenesCount: payload.imagenes?.length
+    });
+    
+    return api.post(`/usuarios/${id}/entrenar-facial`, payload);
   },
   getEstadoFacial: async (id) => {
     if (USE_MOCK) {

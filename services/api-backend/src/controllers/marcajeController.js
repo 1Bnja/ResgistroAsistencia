@@ -281,6 +281,11 @@ exports.registrarMarcaje = async (req, res) => {
   try {
     const { imagenFacial, tipo, ubicacion } = req.body;
 
+    console.log('📝 ===== REGISTRAR MARCAJE CON IA =====');
+    console.log('📝 Tipo:', tipo);
+    console.log('📝 Ubicación:', ubicacion);
+    console.log('📝 Imagen recibida:', imagenFacial ? `${imagenFacial.length} caracteres` : 'NO');
+
     // Validar datos requeridos
     if (!imagenFacial) {
       return res.status(400).json({
@@ -298,6 +303,7 @@ exports.registrarMarcaje = async (req, res) => {
 
     // Llamar al servicio de IA para reconocimiento facial
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:5000';
+    console.log('📝 Llamando a servicio IA:', aiServiceUrl);
 
     let aiResponse;
     try {
@@ -306,6 +312,8 @@ exports.registrarMarcaje = async (req, res) => {
       }, {
         timeout: 10000
       });
+      
+      console.log('📝 Respuesta IA:', JSON.stringify(aiResponse.data, null, 2));
     } catch (aiError) {
       console.error('❌ Error al llamar servicio de IA:', aiError.message);
       return res.status(503).json({
@@ -316,25 +324,43 @@ exports.registrarMarcaje = async (req, res) => {
       });
     }
 
-    // Validar respuesta de IA
-    if (!aiResponse.data || !aiResponse.data.usuario_id) {
+    // Validar respuesta de IA - CORREGIDO: acceder a rostros[0]
+    if (!aiResponse.data || !aiResponse.data.rostros || aiResponse.data.rostros.length === 0) {
+      console.log('❌ No se detectaron rostros en la imagen');
       return res.status(404).json({
         success: false,
-        message: 'No se pudo reconocer el rostro. Intente nuevamente o use login manual.'
+        message: 'No se detectó ningún rostro en la imagen. Intente nuevamente o use login manual.'
       });
     }
 
-    const { usuario_id: usuarioId, confianza } = aiResponse.data;
+    const rostroDetectado = aiResponse.data.rostros[0];
+    
+    if (!rostroDetectado.reconocido || !rostroDetectado.usuario_id) {
+      console.log('❌ Rostro detectado pero no reconocido. Confianza:', rostroDetectado.confianza);
+      return res.status(404).json({
+        success: false,
+        message: 'No se pudo reconocer el rostro. Intente nuevamente o use login manual.',
+        confianza: rostroDetectado.confianza
+      });
+    }
+
+    const usuarioId = rostroDetectado.usuario_id;
+    const confianza = rostroDetectado.confianza;
+
+    console.log('📝 Usuario reconocido:', usuarioId, 'con confianza:', confianza);
 
     // Buscar usuario
     const usuario = await Usuario.findById(usuarioId).populate('horarioId');
     
     if (!usuario || !usuario.activo) {
+      console.log('❌ Usuario no encontrado o inactivo:', usuarioId);
       return res.status(404).json({
         success: false,
         message: 'Usuario no encontrado o inactivo'
       });
     }
+
+    console.log('📝 Usuario encontrado:', usuario.nombre, usuario.apellido);
 
     // Obtener hora actual
     const ahora = new Date();
@@ -356,6 +382,8 @@ exports.registrarMarcaje = async (req, res) => {
       
       estado = resultado.estado;
       minutosAtraso = resultado.minutosAtraso;
+      
+      console.log('📝 Estado calculado:', estado, 'Atraso:', minutosAtraso, 'min');
     }
 
     // Crear marcaje
@@ -372,6 +400,8 @@ exports.registrarMarcaje = async (req, res) => {
       metodoMarcaje: 'automatico',
       notificacionEnviada: false
     });
+
+    console.log('✅ Marcaje creado:', marcaje._id);
 
     // ENVIAR NOTIFICACIÓN SIEMPRE
     const notificacionEnviada = await enviarNotificacion(

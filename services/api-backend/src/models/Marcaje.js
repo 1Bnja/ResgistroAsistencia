@@ -22,7 +22,7 @@ const marcajeSchema = new mongoose.Schema({
   },
   estado: {
     type: String,
-    enum: ['puntual', 'atraso', 'anticipado'],
+    enum: ['puntual', 'atraso', 'anticipado', 'ausente'],
     default: 'puntual'
   },
   minutosAtraso: {
