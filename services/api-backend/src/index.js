@@ -4,8 +4,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/database');
+const redis = require('./config/redis');
 const errorHandler = require('./middleware/errorHandler');
 const slaveGuard = require('./middleware/slaveGuard');
+const { register, metricsMiddleware } = require('./middleware/metrics');
 
 // Importar rutas
 const usuariosRoutes = require('./routes/usuarios');
@@ -18,12 +20,20 @@ const app = express();
 // Conectar a base de datos
 connectDB();
 
+// Conectar a Redis (cache)
+redis.connect().catch(err => {
+  console.warn('⚠️  Redis no disponible, continuando sin cache:', err.message);
+});
+
 // Middlewares
 app.use(helmet()); // Seguridad
 app.use(cors()); // CORS
 app.use(morgan('dev')); // Logging
 app.use(express.json({ limit: '50mb' })); // JSON body parser con límite aumentado
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Middleware de métricas Prometheus
+app.use(metricsMiddleware);
 
 // Middleware de debug para requests grandes
 app.use((req, res, next) => {
@@ -45,6 +55,16 @@ app.get('/health', (req, res) => {
     message: 'API Backend funcionando correctamente',
     timestamp: new Date().toISOString()
   });
+});
+
+// Endpoint de métricas Prometheus (sin autenticación)
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (err) {
+    res.status(500).end(err);
+  }
 });
 
 // Rutas API

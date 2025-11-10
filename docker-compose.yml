@@ -1,14 +1,13 @@
-
 services:
   api-gateway:
     build: ./services/api-gateway
     ports:
       - "8080:80"
       - "8404:8404"
+      - "8405:8405"
     networks:
       - frontend-network
       - backend-network
-    
 
   api-backend-slave:
     build:
@@ -17,18 +16,25 @@ services:
     container_name: api-backend-slave
     ports:
       - "3001:3000"
-    env_file:
-      - ./services/api-backend/.env
+    # CAMBIADO: Ahora usa el .env de la raíz en lugar del env_file local
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
       ROLE: slave
-      # Si dispones de una replica de lectura, puedes definir MONGODB_READ_URI en tu entorno
+      MONGODB_URI: ${MONGODB_URI}
       MONGODB_READ_URI: ${MONGODB_READ_URI:-}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      WEBSOCKET_SERVICE_URL: ${WEBSOCKET_SERVICE_URL}
+      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     networks:
       - backend-network
       - dev-network
     restart: unless-stopped
+    # NO SE TOCA
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
@@ -43,15 +49,23 @@ services:
     container_name: api-backend-dev
     ports:
       - "3000:3000"
-    env_file:
-      - ./services/api-backend/.env
+    # .env de la raíz
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      WEBSOCKET_SERVICE_URL: ${WEBSOCKET_SERVICE_URL}
+      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     networks:
       - backend-network
       - dev-network
     restart: unless-stopped
+    # MANTIENE IGUAL
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
@@ -66,12 +80,14 @@ services:
     container_name: ai-service
     ports:
       - "5050:5000"
+    # CAMBIADO: Variables desde .env
     environment:
       BACKEND_URL: http://api-backend:3000/api/v1
       FLASK_DEBUG: "False"
     networks:
       - backend-network
     restart: unless-stopped
+    # MANTIENE IGUAL
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
       interval: 30s
@@ -86,14 +102,16 @@ services:
     container_name: websocket-service
     ports:
       - "3002:3002"
+    # CAMBIADO: Variables desde .env
     environment:
-      NODE_ENV: development
-      PORT: 3002
-      CORS_ORIGIN: "*"
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${WEBSOCKET_PORT:-3002}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     networks:
       - backend-network
       - frontend-network
     restart: unless-stopped
+    # MANTIENE IGUAL
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
@@ -106,6 +124,13 @@ services:
       context: ./services/frontend
       dockerfile: Dockerfile
     container_name: frontend-1
+    # AGREGADO: Variables de entorno para el frontend
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - VITE_WS_URL=${VITE_WS_URL}
+      - VITE_EXPORT_URL=${VITE_EXPORT_URL}
+      - VITE_ENV=${VITE_ENV}
+      - VITE_USE_MOCK=${VITE_USE_MOCK}
     networks:
       - frontend-network
     restart: unless-stopped
@@ -115,6 +140,13 @@ services:
       context: ./services/frontend
       dockerfile: Dockerfile
     container_name: frontend-2
+    #Variables de entorno para el frontend
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - VITE_WS_URL=${VITE_WS_URL}
+      - VITE_EXPORT_URL=${VITE_EXPORT_URL}
+      - VITE_ENV=${VITE_ENV}
+      - VITE_USE_MOCK=${VITE_USE_MOCK}
     networks:
       - frontend-network
     restart: unless-stopped
@@ -126,6 +158,10 @@ services:
     container_name: terminal-marcaje
     ports:
       - "5174:80"
+    # Variables de entorno si las necesita
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - VITE_WS_URL=${VITE_WS_URL}
     networks:
       - frontend-network
       - backend-network
@@ -135,40 +171,172 @@ services:
     build: ./services/notification-service
     container_name: asistencia-notification-service
     hostname: notification-service
+    #.env centralizado
     environment:
       # SMTP
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=587
-      - SMTP_USER=admnredmail98@gmail.com
-      - SMTP_PASS=roacrmpfbasqyeaf
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
       # Emails
-      - ADMIN_EMAIL=admin@utalca.cl
-      - FROM_EMAIL=Sistema de Asistencia UTalca <admnredmail98@gmail.com>
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - FROM_NAME=${FROM_NAME}
       # App
-      - APP_NAME=Sistema de Control de Asistencia con Reconocimiento Facial
-      - UNIVERSITY_NAME=Universidad de Talca
-      - DEPARTMENT_NAME=Administración de Redes
+      - APP_NAME=${APP_NAME}
+      - UNIVERSITY_NAME=${UNIVERSITY_NAME}
+      - DEPARTMENT_NAME=${DEPARTMENT_NAME}
       # Service
-      - PORT=3003
-      - NODE_ENV=production
-      - LOG_LEVEL=info
+      - PORT=${NOTIFICATION_PORT:-3003}
+      - NODE_ENV=${NODE_ENV}
+      - LOG_LEVEL=${LOG_LEVEL}
+      # MongoDB (si lo necesita)
+      - MONGODB_URI=${MONGODB_URI}
       # Limits
-      - LIMITE_ATRASO_MINUTOS=30
+      - LIMITE_ATRASO_MINUTOS=${LIMITE_ATRASO_MINUTOS}
+      # URLs
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DASHBOARD_URL=${DASHBOARD_URL}
     ports:
       - "3003:3003"
     networks:
       - backend-network
+    # SE MANTIENE IGUAL
     volumes:
       - ./services/notification-service/logs:/app/logs
     restart: unless-stopped
+    # habia un bug en el puerto
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3002/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3003/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
+  export-service:
+    build:
+      context: ./services/export-service
+      dockerfile: Dockerfile
+    container_name: export-service
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - NODE_ENV=${NODE_ENV:-development}
+      - MONGODB_URI=${MONGODB_URI}
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3004/api/export/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MONITORING STACK
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    #SE MANTIENE IGUAL
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    #SE MANTIENE IGUAL
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - backend-network
+      - frontend-network
+    restart: unless-stopped
+    #SE MANTIENE IGUAL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    #SE MANTIENE IGUAL
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    # SE MANTIENE IGUAL (configs de Grafana)
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3030
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    ports:
+      - "3030:3000"
+    networks:
+      - backend-network
+    restart: unless-stopped
+    #SE MANTIENE IGUAL
+    depends_on:
+      - prometheus
+    #SE MANTIENE IGUAL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    #SE MANTIENE IGUAL
+    privileged: true
+    #SE MANTIENE IGUAL
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8081:8080"
+    networks:
+      - backend-network
+    restart: unless-stopped
+    #SE MANTIENE IGUAL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    #SE MANTIENE IGUAL
+    command:
+      - '--path.rootfs=/'
+    ports:
+      - "9100:9100"
+    networks:
+      - backend-network
+    restart: unless-stopped
+    # SE MANTIENE IGUAL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# SE MANTIENEN EXACTAMENTE IGUALES
 networks:
   frontend-network:
   backend-network:
   dev-network:
     driver: bridge
+
+#VOLUMES SE MANTIENEN EXACTAMENTE IGUALES
+volumes:
+  prometheus-data:
+  grafana-data:
