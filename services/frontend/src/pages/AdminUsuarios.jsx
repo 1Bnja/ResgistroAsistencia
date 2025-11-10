@@ -185,13 +185,30 @@ const AdminUsuarios = () => {
   };
 
   const handleCompleteFacialTraining = async (imagenes) => {
-    if (!trainingUser) return;
+    console.log('🎯 ADMIN USUARIOS - handleCompleteFacialTraining called');
+    console.log('🎯 ADMIN USUARIOS - trainingUser:', trainingUser);
+    console.log('🎯 ADMIN USUARIOS - imagenes parameter type:', typeof imagenes);
+    console.log('🎯 ADMIN USUARIOS - imagenes is array:', Array.isArray(imagenes));
+    console.log('🎯 ADMIN USUARIOS - imagenes length:', imagenes?.length);
+    console.log('🎯 ADMIN USUARIOS - First image preview:', imagenes?.[0]?.substring(0, 100));
+    
+    if (!trainingUser) {
+      console.error('🎯 ADMIN USUARIOS - No trainingUser, aborting');
+      return;
+    }
 
     try {
       setTrainingLoading(true);
       setError('');
 
+      console.log('🎯 ADMIN USUARIOS - Calling API entrenarFacial with:', {
+        userId: trainingUser._id,
+        imagesCount: imagenes?.length
+      });
+
       const response = await usuariosAPI.entrenarFacial(trainingUser._id, imagenes);
+
+      console.log('🎯 ADMIN USUARIOS - API response:', response.data);
 
       if (response.data.success) {
         setSuccess(
@@ -202,7 +219,8 @@ const AdminUsuarios = () => {
         setTimeout(() => setSuccess(''), 5000);
       }
     } catch (err) {
-      console.error('Error entrenando reconocimiento facial:', err);
+      console.error('🎯 ADMIN USUARIOS - Error entrenando reconocimiento facial:', err);
+      console.error('🎯 ADMIN USUARIOS - Error details:', err.response?.data);
       setError(err.response?.data?.message || 'Error al entrenar el reconocimiento facial');
     } finally {
       setTrainingLoading(false);

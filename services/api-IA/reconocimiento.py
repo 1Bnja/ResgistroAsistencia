@@ -175,17 +175,31 @@ def procesar_frame_reconocimiento(frame):
     Procesa un frame y reconoce rostros.
     Retorna lista de rostros detectados con sus datos.
     """
+    print("📸 Procesando frame para reconocimiento...", flush=True)
+    
     # Redimensionar para acelerar procesamiento
     rgb_small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
     rgb_small_frame = cv2.cvtColor(rgb_small_frame, cv2.COLOR_BGR2RGB)
     
+    print(f"📸 Frame redimensionado a: {rgb_small_frame.shape}", flush=True)
+    
     # Detectar rostros
+    print("📸 Detectando rostros con CNN...", flush=True)
     face_locations = face_recognition.face_locations(rgb_small_frame, model="cnn")
+    print(f"📸 Rostros detectados en imagen: {len(face_locations)}", flush=True)
+    
+    if len(face_locations) == 0:
+        print("⚠️ No se detectaron rostros en la imagen", flush=True)
+        return []
+    
     face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+    print(f"📸 Encodings generados: {len(face_encodings)}", flush=True)
     
     rostros_detectados = []
     
     for i, face_encoding in enumerate(face_encodings):
+        print(f"\n📸 Analizando rostro {i+1}/{len(face_encodings)}...", flush=True)
+        
         # Coordenadas del rostro (escaladas de vuelta)
         top, right, bottom, left = face_locations[i]
         top *= 4
@@ -199,16 +213,25 @@ def procesar_frame_reconocimiento(frame):
         nombre = "Desconocido"
         
         if len(encodings_conocidos) > 0:
+            print(f"📸 Comparando con {len(encodings_conocidos)} rostros conocidos...", flush=True)
             # Comparar con rostros conocidos
             distancias = face_recognition.face_distance(encodings_conocidos, face_encoding)
             mejor_indice = np.argmin(distancias)
             mejor_distancia = distancias[mejor_indice]
+            
+            print(f"📸 Mejor coincidencia: índice={mejor_indice}, distancia={mejor_distancia:.4f}", flush=True)
+            print(f"📸 ID candidato: {nombres_conocidos[mejor_indice]}", flush=True)
             
             # Umbral de confianza (0.6 = estricto, 0.7 = moderado)
             if mejor_distancia < 0.6:
                 usuario_id = nombres_conocidos[mejor_indice]
                 confianza = 1.0 - mejor_distancia
                 nombre = f"Usuario {usuario_id[:8]}"  # Mostrar primeros 8 chars del ID
+                print(f"✅ RECONOCIDO: {nombre} con confianza {confianza:.3f}", flush=True)
+            else:
+                print(f"❌ No reconocido - distancia {mejor_distancia:.4f} > umbral 0.6", flush=True)
+        else:
+            print("⚠️ No hay encodings conocidos para comparar", flush=True)
         
         rostros_detectados.append({
             'usuario_id': usuario_id,
@@ -265,19 +288,34 @@ def recognize():
     }
     """
     try:
+        print("🔍 ===== RECOGNIZE ENDPOINT =====", flush=True)
+        print(f"🔍 Rostros conocidos en memoria: {len(nombres_conocidos)}", flush=True)
+        if len(nombres_conocidos) > 0:
+            print(f"🔍 IDs conocidos: {nombres_conocidos}", flush=True)
+        
         data = request.get_json()
         
         if not data or 'image' not in data:
+            print("❌ No se proporciono imagen en el request", flush=True)
             return jsonify({
                 'success': False,
                 'message': 'No se proporciono imagen'
             }), 400
         
+        print(f"🔍 Longitud de imagen recibida: {len(data['image'])} caracteres", flush=True)
+        
         # Convertir imagen base64 a array
         frame = imagen_base64_a_array(data['image'])
+        print(f"🔍 Frame decodificado - Shape: {frame.shape}", flush=True)
         
         # Procesar reconocimiento
         rostros = procesar_frame_reconocimiento(frame)
+        
+        print(f"🔍 Rostros detectados: {len(rostros)}", flush=True)
+        for i, rostro in enumerate(rostros):
+            print(f"🔍 Rostro {i+1}: reconocido={rostro['reconocido']}, usuario_id={rostro.get('usuario_id')}, confianza={rostro.get('confianza', 0):.3f}", flush=True)
+        
+        print("✅ Reconocimiento completado", flush=True)
         
         return jsonify({
             'success': True,
@@ -286,12 +324,15 @@ def recognize():
         }), 200
         
     except ValueError as e:
+        print(f"❌ ValueError en /recognize: {e}", flush=True)
         return jsonify({
             'success': False,
             'message': str(e)
         }), 400
     except Exception as e:
-        print(f"Error en /recognize: {e}")
+        print(f"❌ Error en /recognize: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'message': 'Error procesando imagen'

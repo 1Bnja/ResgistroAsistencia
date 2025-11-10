@@ -110,10 +110,14 @@ export default function FacialTraining({ usuarioId, nombreUsuario, onComplete, o
 
     try {
       console.log(`🤖 Training with ${photos.length} photos`);
+      console.log('📸 FACIAL TRAINING - Photos array length:', photos.length);
+      console.log('📸 FACIAL TRAINING - First photo preview:', photos[0]?.substring(0, 100));
+      console.log('📸 FACIAL TRAINING - All photos sizes:', photos.map((p, i) => `Photo ${i}: ${p?.length || 0} chars`));
       
       // Pasar las fotos al componente padre para que haga la llamada al backend
       setTimeout(() => {
         stopCamera();
+        console.log('📸 FACIAL TRAINING - Calling onComplete with photos array');
         if (onComplete) onComplete(photos); // Enviar array de fotos, no la respuesta
       }, 500);
 
