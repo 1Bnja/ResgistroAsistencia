@@ -72,9 +72,27 @@ const Marcajes = () => {
     loadMarcajes(clearedFilters);
   };
 
-  const handleExport = () => {
-    // Implementar exportación a CSV o Excel
-    alert('Función de exportación en desarrollo');
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+      
+      // Preparar los parámetros de filtro
+      const exportParams = {};
+      if (filters.fechaInicio) exportParams.fechaInicio = filters.fechaInicio;
+      if (filters.fechaFin) exportParams.fechaFin = filters.fechaFin;
+      if (filters.estado) exportParams.estado = filters.estado;
+      
+      await marcajesAPI.exportarExcel(exportParams);
+      
+      // Mostrar mensaje de éxito (opcional)
+      setError(''); // Limpiar errores anteriores
+      
+    } catch (err) {
+      console.error('Error al exportar:', err);
+      setError('Error al exportar los marcajes. Intente nuevamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusColor = (estado) => {

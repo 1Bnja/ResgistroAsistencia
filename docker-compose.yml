@@ -128,6 +128,7 @@ services:
     environment:
       - VITE_API_URL=${VITE_API_URL}
       - VITE_WS_URL=${VITE_WS_URL}
+      - VITE_EXPORT_URL=${VITE_EXPORT_URL}
       - VITE_ENV=${VITE_ENV}
       - VITE_USE_MOCK=${VITE_USE_MOCK}
     networks:
@@ -143,6 +144,7 @@ services:
     environment:
       - VITE_API_URL=${VITE_API_URL}
       - VITE_WS_URL=${VITE_WS_URL}
+      - VITE_EXPORT_URL=${VITE_EXPORT_URL}
       - VITE_ENV=${VITE_ENV}
       - VITE_USE_MOCK=${VITE_USE_MOCK}
     networks:
@@ -209,6 +211,27 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  export-service:
+    build:
+      context: ./services/export-service
+      dockerfile: Dockerfile
+    container_name: export-service
+    ports:
+      - "3004:3003"
+    environment:
+      - PORT=3003
+      - NODE_ENV=${NODE_ENV:-development}
+      - MONGODB_URI=${MONGODB_URI}
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3003/api/export/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # MONITORING STACK
 
   prometheus:

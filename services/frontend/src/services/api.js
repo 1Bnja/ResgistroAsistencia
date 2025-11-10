@@ -297,6 +297,42 @@ export const marcajesAPI = {
     }
     return api.post('/marcajes/registrar', marcajeData);
   },
+  exportarExcel: async (params) => {
+    const exportApi = axios.create({
+      baseURL: import.meta.env.VITE_EXPORT_URL || 'http://localhost:3004',
+      timeout: 60000,
+      responseType: 'blob'
+    });
+
+    // Agregar token si existe
+    const token = localStorage.getItem('token');
+    if (token) {
+      exportApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await exportApi.get('/api/export/marcajes/excel', { params });
+    
+    // Crear URL del blob y descargar
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Obtener nombre del archivo del header o usar uno por defecto
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = 'reporte_asistencia.xlsx';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (filenameMatch) filename = filenameMatch[1];
+    }
+    
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+    return { data: { success: true, message: 'Archivo descargado exitosamente' } };
+  },
   getEstadisticas: async (params) => {
     if (USE_MOCK) {
       await mockDelay();
