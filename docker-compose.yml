@@ -218,16 +218,16 @@ services:
       dockerfile: Dockerfile
     container_name: export-service
     ports:
-      - "3004:3003"
+      - "3004:3004"
     environment:
-      - PORT=3003
+      - PORT=3004
       - NODE_ENV=${NODE_ENV:-development}
       - MONGODB_URI=${MONGODB_URI}
     networks:
       - backend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3003/api/export/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3004/api/export/health"]
       interval: 30s
       timeout: 10s
       retries: 3
