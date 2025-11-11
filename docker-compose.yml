@@ -9,46 +9,13 @@ services:
       - frontend-network
       - backend-network
 
-  api-backend-slave:
+  api-backend-1:
     build:
       context: ./services/api-backend
       dockerfile: Dockerfile
-    container_name: api-backend-slave
-    ports:
-      - "3001:3000"
-    # CAMBIADO: Ahora usa el .env de la raíz en lugar del env_file local
-    environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3000
-      ROLE: slave
-      MONGODB_URI: ${MONGODB_URI}
-      MONGODB_READ_URI: ${MONGODB_READ_URI:-}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRE: ${JWT_EXPIRE}
-      AI_SERVICE_URL: ${AI_SERVICE_URL}
-      WEBSOCKET_SERVICE_URL: ${WEBSOCKET_SERVICE_URL}
-      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL}
-      CORS_ORIGIN: ${CORS_ORIGIN}
-    networks:
-      - backend-network
-      - dev-network
-    restart: unless-stopped
-    # NO SE TOCA
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  api-backend:
-    build:
-      context: ./services/api-backend
-      dockerfile: Dockerfile
-    container_name: api-backend-dev
+    container_name: api-backend-1
     ports:
       - "3000:3000"
-    # .env de la raíz
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
@@ -63,7 +30,6 @@ services:
       - backend-network
       - dev-network
     restart: unless-stopped
-    # MANTIENE IGUAL
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
@@ -71,21 +37,47 @@ services:
       retries: 3
       start_period: 10s
 
-  ai-service:
+  api-backend-2:
+    build:
+      context: ./services/api-backend
+      dockerfile: Dockerfile
+    container_name: api-backend-2
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      MONGODB_URI: ${MONGODB_URI}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      WEBSOCKET_SERVICE_URL: ${WEBSOCKET_SERVICE_URL}
+      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    networks:
+      - backend-network
+      - dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  ai-service-1:
     build:
       context: ./services/api-IA
       dockerfile: Dockerfile
-    container_name: ai-service
+    container_name: ai-service-1
     ports:
       - "5050:5000"
-    # CAMBIADO: Variables desde .env
     environment:
       BACKEND_URL: http://api-backend:3000/api/v1
       FLASK_DEBUG: "False"
     networks:
       - backend-network
     restart: unless-stopped
-    # MANTIENE IGUAL
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
       interval: 30s
@@ -93,14 +85,33 @@ services:
       retries: 3
       start_period: 20s
 
-  websocket-service:
+  ai-service-2:
+    build:
+      context: ./services/api-IA
+      dockerfile: Dockerfile
+    container_name: ai-service-2
+    ports:
+      - "5051:5000"
+    environment:
+      BACKEND_URL: http://api-backend:3000/api/v1
+      FLASK_DEBUG: "False"
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  websocket-service-1:
     build:
       context: ./services/websocket-service
       dockerfile: Dockerfile
-    container_name: websocket-service
+    container_name: websocket-service-1
     ports:
       - "3002:3002"
-    # CAMBIADO: Variables desde .env
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${WEBSOCKET_PORT:-3002}
@@ -109,7 +120,28 @@ services:
       - backend-network
       - frontend-network
     restart: unless-stopped
-    # MANTIENE IGUAL
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  websocket-service-2:
+    build:
+      context: ./services/websocket-service
+      dockerfile: Dockerfile
+    container_name: websocket-service-2
+    ports:
+      - "3005:3002"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${WEBSOCKET_PORT:-3002}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    networks:
+      - backend-network
+      - frontend-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
