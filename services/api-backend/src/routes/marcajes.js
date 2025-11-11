@@ -10,19 +10,18 @@ const {
 } = require('../controllers/marcajeController');
 
 const { protect, authorize } = require('../middleware/auth');
-const { cache, invalidateByTags } = require('../middleware/cache');
 
-// Rutas públicas para terminales (invalidan cache por tags - ultrarrápido)
-router.post('/registrar', invalidateByTags(['marcajes', 'estadisticas']), registrarMarcaje);
-router.post('/reconocimiento', invalidateByTags(['marcajes', 'estadisticas']), registrarMarcajeReconocimiento);
-router.post('/credenciales', invalidateByTags(['marcajes', 'estadisticas']), registrarMarcajeConCredenciales);
+// Rutas públicas para terminales
+router.post('/registrar', registrarMarcaje);
+router.post('/reconocimiento', registrarMarcajeReconocimiento);
+router.post('/credenciales', registrarMarcajeConCredenciales);
 
 // Rutas protegidas
 router.use(protect);
 
-// GET con cache usando tags (30s para marcajes, 60s para estadísticas)
-router.get('/', cache(30, { tags: ['marcajes'] }), getMarcajes);
-router.get('/hoy', cache(30, { tags: ['marcajes'] }), getMarcajesHoy);
-router.get('/estadisticas', authorize('admin', 'superadmin'), cache(60, { tags: ['estadisticas'] }), getEstadisticas);
+// Rutas GET
+router.get('/', getMarcajes);
+router.get('/hoy', getMarcajesHoy);
+router.get('/estadisticas', authorize('admin', 'superadmin'), getEstadisticas);
 
 module.exports = router;

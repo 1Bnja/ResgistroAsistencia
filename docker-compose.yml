@@ -23,7 +23,6 @@ services:
       ROLE: slave
       MONGODB_URI: ${MONGODB_URI}
       MONGODB_READ_URI: ${MONGODB_READ_URI:-}
-      REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRE: ${JWT_EXPIRE}
       AI_SERVICE_URL: ${AI_SERVICE_URL}
@@ -54,7 +53,6 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
       MONGODB_URI: ${MONGODB_URI}
-      REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRE: ${JWT_EXPIRE}
       AI_SERVICE_URL: ${AI_SERVICE_URL}
