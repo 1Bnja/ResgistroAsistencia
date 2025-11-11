@@ -10,19 +10,19 @@ const {
 } = require('../controllers/marcajeController');
 
 const { protect, authorize } = require('../middleware/auth');
-const { cache, invalidateCache } = require('../middleware/cache');
+const { cache, invalidateByTags } = require('../middleware/cache');
 
-// Rutas públicas para terminales (invalidan cache al crear marcaje)
-router.post('/registrar', invalidateCache(['cache:*:marcajes*', 'cache:*:estadisticas*']), registrarMarcaje);
-router.post('/reconocimiento', invalidateCache(['cache:*:marcajes*', 'cache:*:estadisticas*']), registrarMarcajeReconocimiento);
-router.post('/credenciales', invalidateCache(['cache:*:marcajes*', 'cache:*:estadisticas*']), registrarMarcajeConCredenciales);
+// Rutas públicas para terminales (invalidan cache por tags - ultrarrápido)
+router.post('/registrar', invalidateByTags(['marcajes', 'estadisticas']), registrarMarcaje);
+router.post('/reconocimiento', invalidateByTags(['marcajes', 'estadisticas']), registrarMarcajeReconocimiento);
+router.post('/credenciales', invalidateByTags(['marcajes', 'estadisticas']), registrarMarcajeConCredenciales);
 
 // Rutas protegidas
 router.use(protect);
 
-// GET con cache (30s para marcajes, 60s para estadísticas)
-router.get('/', cache(30), getMarcajes);
-router.get('/hoy', cache(30), getMarcajesHoy);
-router.get('/estadisticas', authorize('admin', 'superadmin'), cache(60), getEstadisticas);
+// GET con cache usando tags (30s para marcajes, 60s para estadísticas)
+router.get('/', cache(30, { tags: ['marcajes'] }), getMarcajes);
+router.get('/hoy', cache(30, { tags: ['marcajes'] }), getMarcajesHoy);
+router.get('/estadisticas', authorize('admin', 'superadmin'), cache(60, { tags: ['estadisticas'] }), getEstadisticas);
 
 module.exports = router;
