@@ -664,7 +664,20 @@ exports.getMarcajes = async (req, res) => {
     if (tipo) filtros.tipo = tipo;
     
     const marcajes = await Marcaje.find(filtros)
-      .populate('usuarioId', 'nombre apellido rut cargo email')
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido rut cargo email horarioId establecimientoId',
+        populate: [
+          {
+            path: 'horarioId',
+            select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+          },
+          {
+            path: 'establecimientoId',
+            select: 'nombre codigo direccion'
+          }
+        ]
+      })
       .sort({ fecha: -1, hora: -1 })
       .limit(100);
     
@@ -698,7 +711,20 @@ exports.getMarcajesHoy = async (req, res) => {
         $lt: new Date(hoy.getTime() + 24 * 60 * 60 * 1000)
       }
     })
-      .populate('usuarioId', 'nombre apellido rut cargo email')
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido rut cargo email horarioId establecimientoId',
+        populate: [
+          {
+            path: 'horarioId',
+            select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+          },
+          {
+            path: 'establecimientoId',
+            select: 'nombre codigo direccion'
+          }
+        ]
+      })
       .sort({ hora: -1 });
     
     res.status(200).json({
