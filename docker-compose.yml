@@ -199,9 +199,9 @@ services:
       - "3003:3003"
     networks:
       - backend-network
-    # SE MANTIENE IGUAL
+    # Logs centralizados en volumes/logs
     volumes:
-      - ./services/notification-service/logs:/app/logs
+      - ./volumes/logs:/app/logs
     restart: unless-stopped
     # habia un bug en el puerto
     healthcheck:
@@ -221,6 +221,9 @@ services:
       - PORT=3004
       - NODE_ENV=${NODE_ENV:-development}
       - MONGODB_URI=${MONGODB_URI}
+    # Logs centralizados
+    volumes:
+      - ./volumes/logs:/app/logs
     networks:
       - backend-network
     restart: unless-stopped
@@ -326,6 +329,27 @@ services:
       timeout: 5s
       retries: 3
 
+  backup-service:
+    build: ./services/backup-service
+    container_name: backup-service
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - RETENTION_DAYS=7
+    volumes:
+      # Volumen para almacenar los backups
+      - ./volumes/backups:/backups
+      # Volumen para logs del servicio
+      - backup-logs:/var/log/backup
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-f", "/var/log/backup/cron.log"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 # SE MANTIENEN EXACTAMENTE IGUALES
 networks:
   frontend-network:
@@ -337,3 +361,4 @@ networks:
 volumes:
   prometheus-data:
   grafana-data:
+  backup-logs:

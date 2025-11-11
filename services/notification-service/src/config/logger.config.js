@@ -33,15 +33,15 @@ const logger = winston.createLogger({
         customFormat
       )
     }),
-    // Logs a archivos
+    // Logs a archivos centralizados
     new winston.transports.File({ 
-      filename: 'logs/error.log', 
+      filename: '/app/logs/notification-service-error.log', 
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5
     }),
     new winston.transports.File({ 
-      filename: 'logs/combined.log',
+      filename: '/app/logs/notification-service.log',
       maxsize: 5242880, // 5MB
       maxFiles: 5
     })
