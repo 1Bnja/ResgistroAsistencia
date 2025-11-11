@@ -32,11 +32,20 @@ RUN pip install --no-cache-dir opencv-python-headless
 # Instalar el resto de dependencias
 RUN pip install --no-cache-dir dlib face_recognition Flask flask-cors requests
 
-# 6. Copiar el resto de nuestro código
+# 6. Crear usuario no privilegiado
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# 7. Copiar el resto de nuestro código
 COPY . .
 
-# 7. Exponer el puerto para nuestra aplicación web
+# 8. Dar permisos al usuario no privilegiado
+RUN chown -R appuser:appuser /app
+
+# 9. Cambiar a usuario no privilegiado
+USER appuser
+
+# 10. Exponer el puerto para nuestra aplicación web
 EXPOSE 5000
 
-# 8. El comando que se ejecutará cuando inicie el contenedor
+# 11. El comando que se ejecutará cuando inicie el contenedor
 CMD ["python", "reconocimiento.py"]

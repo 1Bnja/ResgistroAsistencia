@@ -155,7 +155,7 @@ services:
       dockerfile: Dockerfile
     container_name: terminal-marcaje
     ports:
-      - "5174:80"
+      - "5174:8080"
     # Variables de entorno si las necesita
     environment:
       - VITE_API_URL=${VITE_API_URL}
