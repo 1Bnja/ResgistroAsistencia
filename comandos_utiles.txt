@@ -338,3 +338,14 @@ timeout 30 bash -c 'count=0; while true; do curl -s http://localhost:8080/health
 Última actualización: 11 de noviembre de 2025
 Sistema de Control de Asistencia - DevOps Team
 ═══════════════════════════════════════════════════════════════════════════
+
+
+docker exec backup-service /scripts/backup-daily.sh
+
+docker exec backup-service crontab -l
+
+docker exec backup-service tail -f /var/log/backup/cron.log
+
+docker exec backup-service ls -lh /backups/mongodb/
+
+docker exec backup-service du -sh /backups/mongodb/*
