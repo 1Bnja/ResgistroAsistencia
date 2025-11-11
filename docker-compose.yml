@@ -233,13 +233,12 @@ services:
   # MONITORING STACK
 
   prometheus:
-    image: prom/prometheus:latest
+    build:
+      context: ./services/prometheus
+      dockerfile: Dockerfile
     container_name: prometheus
-    #SE MANTIENE IGUAL
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
-    #SE MANTIENE IGUAL
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -252,7 +251,6 @@ services:
       - backend-network
       - frontend-network
     restart: unless-stopped
-    #SE MANTIENE IGUAL
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
       interval: 30s
@@ -260,13 +258,12 @@ services:
       retries: 3
 
   grafana:
-    image: grafana/grafana:latest
+    build:
+      context: ./services/grafana
+      dockerfile: Dockerfile
     container_name: grafana
-    #SE MANTIENE IGUAL
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-    # SE MANTIENE IGUAL (configs de Grafana)
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
@@ -278,10 +275,8 @@ services:
     networks:
       - backend-network
     restart: unless-stopped
-    #SE MANTIENE IGUAL
     depends_on:
       - prometheus
-    #SE MANTIENE IGUAL
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -291,18 +286,22 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
-    #SE MANTIENE IGUAL
     privileged: true
-    #SE MANTIENE IGUAL
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/:/var/lib/docker:ro
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+    command:
+      - '--docker_only=true'
+      - '--housekeeping_interval=10s'
+      - '--disable_metrics=disk,diskIO,network,tcp,udp,percpu,sched,process'
+      - '--store_container_labels=true'
     ports:
       - "8081:8080"
     networks:
       - backend-network
     restart: unless-stopped
-    #SE MANTIENE IGUAL
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
       interval: 30s
