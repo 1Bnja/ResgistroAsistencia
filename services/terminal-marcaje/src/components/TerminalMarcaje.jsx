@@ -57,9 +57,17 @@ function TerminalMarcaje() {
           resetTerminal()
         }, 5000)
       } else {
-        // Si falla el reconocimiento, verificar si requiere fallback manual
-        if (response.fallbackRequired || response.statusCode === 503 || response.statusCode === 404 || response.statusCode === 400) {
-          // Mostrar formulario de login manual
+        // Si falla el reconocimiento, verificar el tipo de error
+        if (response.statusCode === 400) {
+          // Error de validación (marcaje duplicado, etc.) - mostrar error directo
+          setError(response.error || 'Error de validación')
+          setStep('error')
+          
+          setTimeout(() => {
+            resetTerminal()
+          }, 6000) // 6 segundos para leer el mensaje
+        } else if (response.fallbackRequired || response.statusCode === 503 || response.statusCode === 404) {
+          // Servicio no disponible o usuario no encontrado - mostrar formulario de login manual
           setFallbackReason(response.error || 'No se pudo reconocer el rostro')
           setReconocimientoFallidoInfo({
             mensaje: response.error,
@@ -130,7 +138,8 @@ function TerminalMarcaje() {
           resetTerminal()
         }, 5000)
       } else {
-        throw new Error(response.message || 'Error al registrar marcaje')
+        // Manejar error de validación (ej: marcaje duplicado)
+        throw new Error(response.error || 'Error al registrar marcaje')
       }
     } catch (err) {
       console.error('Error en login manual:', err)

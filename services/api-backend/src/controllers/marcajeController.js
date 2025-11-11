@@ -7,49 +7,143 @@ const { notificarNuevoMarcaje, notificarAtraso } = require('../services/websocke
 // ==========================================
 // HELPER: CALCULAR ESTADO DEL MARCAJE
 // ==========================================
-const calcularEstadoMarcaje = (horaEntrada, horaMarcaje, toleranciaMinutos, limiteAtrasoMinutos = 30) => {
+/**
+ * Calcula el estado del marcaje según las nuevas reglas:
+ * - ANTICIPADO: ≥30 minutos antes de la hora de entrada
+ * - PUNTUAL: entre 10 minutos antes y 15 minutos después de la hora de entrada
+ * - ATRASO: más de 15 minutos después hasta 60 minutos
+ * - AUSENTE: más de 60 minutos después de la hora de entrada
+ * 
+ * @param {string} horaEntrada - Hora de entrada esperada (formato "HH:MM")
+ * @param {string} horaMarcaje - Hora real del marcaje (formato "HH:MM")
+ * @returns {object} { estado: string, minutosAtraso: number }
+ */
+const calcularEstadoMarcaje = (horaEntrada, horaMarcaje) => {
+  // Obtener configuración desde variables de entorno con valores por defecto
+  const TOLERANCIA_ANTICIPADO = parseInt(process.env.TOLERANCIA_ANTICIPADO_MINUTOS) || 30;
+  const TOLERANCIA_PUNTUAL_ANTES = parseInt(process.env.TOLERANCIA_PUNTUAL_ANTES_MINUTOS) || 10;
+  const TOLERANCIA_PUNTUAL_DESPUES = parseInt(process.env.TOLERANCIA_PUNTUAL_DESPUES_MINUTOS) || 15;
+  const LIMITE_AUSENCIA = parseInt(process.env.LIMITE_AUSENCIA_MINUTOS) || 60;
+
+  // Validar formato de horas
+  if (!horaEntrada || !horaMarcaje || !horaEntrada.includes(':') || !horaMarcaje.includes(':')) {
+    console.warn('⚠️ Formato de hora inválido:', { horaEntrada, horaMarcaje });
+    return {
+      estado: 'puntual',
+      minutosAtraso: 0
+    };
+  }
+
   const [horaH, horaM] = horaEntrada.split(':').map(Number);
   const [marcajeH, marcajeM] = horaMarcaje.split(':').map(Number);
   
   const horaEntradaMinutos = horaH * 60 + horaM;
   const horaMarcajeMinutos = marcajeH * 60 + marcajeM;
   
+  // Diferencia en minutos (negativo = antes, positivo = después)
   const diferencia = horaMarcajeMinutos - horaEntradaMinutos;
   
-  // Si llega muy temprano (15 minutos antes)
-  if (diferencia < -15) {
+  console.log(`⏰ Cálculo de estado ENTRADA:
+    - Hora entrada esperada: ${horaEntrada} (${horaEntradaMinutos} minutos)
+    - Hora marcaje real: ${horaMarcaje} (${horaMarcajeMinutos} minutos)
+    - Diferencia: ${diferencia} minutos ${diferencia < 0 ? '(antes)' : '(después)'}
+    - Tolerancias: anticipado=${TOLERANCIA_ANTICIPADO}, puntual_antes=${TOLERANCIA_PUNTUAL_ANTES}, puntual_después=${TOLERANCIA_PUNTUAL_DESPUES}, ausencia=${LIMITE_AUSENCIA}
+  `);
+  
+  // REGLA 1: ANTICIPADO - Llega 30 minutos o más antes
+  if (diferencia <= -TOLERANCIA_ANTICIPADO) {
     return {
       estado: 'anticipado',
-      minutosAtraso: 0
+      minutosAtraso: 0,
+      minutosAnticipado: Math.abs(diferencia)
     };
   }
   
-  // Si llega dentro de la tolerancia (puntual)
-  if (diferencia <= toleranciaMinutos) {
+  // REGLA 2: PUNTUAL - Entre 10 min antes y 15 min después
+  if (diferencia >= -TOLERANCIA_PUNTUAL_ANTES && diferencia <= TOLERANCIA_PUNTUAL_DESPUES) {
     return {
       estado: 'puntual',
       minutosAtraso: 0
     };
   }
   
-  // Calcular minutos de atraso real (después de la tolerancia)
-  const minutosAtrasoReal = diferencia - toleranciaMinutos;
-  
-  // Si el atraso supera el límite, marcar como ausente
-  if (minutosAtrasoReal > limiteAtrasoMinutos) {
+  // REGLA 3: AUSENTE - Más de 60 minutos después
+  if (diferencia > LIMITE_AUSENCIA) {
     return {
       estado: 'ausente',
-      minutosAtraso: minutosAtrasoReal
+      minutosAtraso: diferencia
     };
   }
   
-  // Si hay atraso pero no supera el límite
+  // REGLA 4: ATRASO - Más de 15 min pero menos de 60 min después
+  if (diferencia > TOLERANCIA_PUNTUAL_DESPUES) {
+    return {
+      estado: 'atraso',
+      minutosAtraso: diferencia
+    };
+  }
+  
+  // Caso por defecto (no debería llegar aquí, pero por seguridad)
   return {
-    estado: 'atraso',
-    minutosAtraso: minutosAtrasoReal
+    estado: 'puntual',
+    minutosAtraso: 0
   };
 };
 
+// ==========================================
+// HELPER: CALCULAR ESTADO DEL MARCAJE DE SALIDA
+// ==========================================
+/**
+ * Calcula el estado del marcaje de salida según las reglas:
+ * - SALIDA_ANTICIPADA: Sale antes de la hora de salida configurada
+ * - SALIDA_NORMAL: Sale en o después de la hora de salida configurada
+ * 
+ * @param {string} horaSalida - Hora de salida esperada (formato "HH:MM")
+ * @param {string} horaMarcaje - Hora real del marcaje de salida (formato "HH:MM")
+ * @returns {object} { estado: string, minutosAnticipado: number, minutosDespues: number }
+ */
+const calcularEstadoSalida = (horaSalida, horaMarcaje) => {
+  // Obtener configuración desde variables de entorno con valores por defecto
+  const TOLERANCIA_SALIDA_ANTICIPADA = parseInt(process.env.TOLERANCIA_SALIDA_ANTICIPADA_MINUTOS) || 0;
+
+  // Validar formato de horas
+  if (!horaSalida || !horaMarcaje || !horaSalida.includes(':') || !horaMarcaje.includes(':')) {
+    console.warn('⚠️ Formato de hora inválido:', { horaSalida, horaMarcaje });
+    return {
+      estado: 'salida_normal',
+      minutosAnticipado: 0,
+      minutosDespues: 0
+    };
+  }
+
+  const [salidaH, salidaM] = horaSalida.split(':').map(Number);
+  const [marcajeH, marcajeM] = horaMarcaje.split(':').map(Number);
+  
+  const horaSalidaMinutos = salidaH * 60 + salidaM;
+  const horaMarcajeMinutos = marcajeH * 60 + marcajeM;
+  
+  // Diferencia en minutos (negativo = antes, positivo = después)
+  const diferencia = horaMarcajeMinutos - horaSalidaMinutos;
+  
+  // REGLA 1: SALIDA ANTICIPADA - Sale antes de la hora (considerando tolerancia si existe)
+  if (diferencia < -TOLERANCIA_SALIDA_ANTICIPADA) {
+    return {
+      estado: 'salida_anticipada',
+      minutosAnticipado: Math.abs(diferencia),
+      minutosDespues: 0
+    };
+  }
+  
+  // REGLA 2: SALIDA NORMAL - Sale en la hora o después (o dentro de la tolerancia)
+  return {
+    estado: 'salida_normal',
+    minutosAnticipado: 0,
+    minutosDespues: Math.max(0, diferencia)
+  };
+};
+
+// ==========================================
+// FUNCIÓN PARA ENVIAR NOTIFICACIONES
 // ==========================================
 // FUNCIÓN PARA ENVIAR NOTIFICACIONES
 // ==========================================
@@ -80,22 +174,36 @@ const enviarNotificacion = async (usuario, marcaje, horario, estado, minutosAtra
         ubicacion: marcaje.ubicacion
       },
       horario: {
-        horaEntrada: horario.horaEntrada,
-        tolerancia: horario.toleranciaMinutos
+        horaEntrada: horario?.horaEntrada || 'N/A',
+        horaSalida: horario?.horaSalida || 'N/A',
+        toleranciaPuntualAntes: parseInt(process.env.TOLERANCIA_PUNTUAL_ANTES_MINUTOS) || 10,
+        toleranciaPuntualDespues: parseInt(process.env.TOLERANCIA_PUNTUAL_DESPUES_MINUTOS) || 15
       }
     };
 
-    // Determinar endpoint según el estado
+    // Determinar endpoint según el estado y tipo de marcaje
     let endpoint = '/api/notifications/registro';
     
+    // Estados de ENTRADA
     if (estado === 'ausente') {
       endpoint = '/api/notifications/ausente';
-      // Agregar datos específicos para ausencia
-      payload.marcaje.limiteAtraso = parseInt(process.env.LIMITE_ATRASO_MINUTOS) || 30;
+      payload.marcaje.limiteAusencia = parseInt(process.env.LIMITE_AUSENCIA_MINUTOS) || 60;
     } else if (estado === 'atraso') {
       endpoint = '/api/notifications/atraso';
-      // Agregar hora esperada para atraso
       payload.marcaje.horaEsperada = horario.horaEntrada;
+    } else if (estado === 'anticipado') {
+      endpoint = '/api/notifications/registro';
+      payload.marcaje.esAnticipado = true;
+    } 
+    // Estados de SALIDA
+    else if (estado === 'salida_anticipada') {
+      endpoint = '/api/notifications/salida';
+      payload.marcaje.esSalidaAnticipada = true;
+      payload.marcaje.horaSalidaEsperada = horario.horaSalida;
+    } else if (estado === 'salida_normal') {
+      endpoint = '/api/notifications/salida';
+      payload.marcaje.esSalidaNormal = true;
+      payload.marcaje.horaSalidaEsperada = horario.horaSalida;
     }
 
     // Enviar notificación
@@ -124,6 +232,106 @@ const enviarNotificacion = async (usuario, marcaje, horario, estado, minutosAtra
     }
     
     return false;
+  };
+};
+
+// ==========================================
+// HELPER: VALIDAR MARCAJE DUPLICADO
+// ==========================================
+/**
+ * Valida si el usuario puede registrar un marcaje según las reglas:
+ * - ENTRADA: No puede tener otra entrada el mismo día sin salida
+ * - SALIDA: Debe tener una entrada previa el mismo día sin salida
+ * 
+ * @param {string} usuarioId - ID del usuario
+ * @param {string} tipo - Tipo de marcaje ('entrada' o 'salida')
+ * @returns {object} { valido: boolean, mensaje: string, ultimoMarcaje: object }
+ */
+const validarMarcajeDuplicado = async (usuarioId, tipo) => {
+  try {
+    // Obtener fecha de hoy (inicio y fin del día)
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const finDelDia = new Date(hoy);
+    finDelDia.setHours(23, 59, 59, 999);
+
+    // Buscar marcajes del usuario hoy, ordenados por fecha descendente
+    const marcajesHoy = await Marcaje.find({
+      usuarioId,
+      fecha: {
+        $gte: hoy,
+        $lte: finDelDia
+      }
+    }).sort({ fecha: -1, hora: -1 });
+
+    if (marcajesHoy.length === 0) {
+      // No hay marcajes hoy
+      if (tipo === 'salida') {
+        return {
+          valido: false,
+          mensaje: 'No puedes registrar una salida sin haber registrado entrada primero',
+          ultimoMarcaje: null
+        };
+      }
+      // Primera entrada del día - OK
+      return {
+        valido: true,
+        mensaje: 'Primera entrada del día',
+        ultimoMarcaje: null
+      };
+    }
+
+    // Obtener el último marcaje
+    const ultimoMarcaje = marcajesHoy[0];
+
+    if (tipo === 'entrada') {
+      // Si el último marcaje fue entrada, no puede registrar otra entrada
+      if (ultimoMarcaje.tipo === 'entrada') {
+        return {
+          valido: false,
+          mensaje: `Ya registraste entrada hoy a las ${ultimoMarcaje.hora}. Debes registrar salida primero.`,
+          ultimoMarcaje
+        };
+      }
+      // Si el último fue salida, puede registrar nueva entrada (re-entrada)
+      return {
+        valido: true,
+        mensaje: 'Re-entrada permitida',
+        ultimoMarcaje
+      };
+    }
+
+    if (tipo === 'salida') {
+      // Si el último marcaje fue salida, no puede registrar otra salida
+      if (ultimoMarcaje.tipo === 'salida') {
+        return {
+          valido: false,
+          mensaje: `Ya registraste salida hoy a las ${ultimoMarcaje.hora}. Debes registrar entrada primero.`,
+          ultimoMarcaje
+        };
+      }
+      // Si el último fue entrada, puede registrar salida
+      return {
+        valido: true,
+        mensaje: 'Salida correspondiente a entrada previa',
+        ultimoMarcaje
+      };
+    }
+
+    return {
+      valido: true,
+      mensaje: 'Validación OK',
+      ultimoMarcaje
+    };
+
+  } catch (error) {
+    console.error('Error validando marcaje duplicado:', error);
+    // En caso de error, permitir el marcaje (fail-safe)
+    return {
+      valido: true,
+      mensaje: 'Validación omitida por error',
+      ultimoMarcaje: null
+    };
   }
 };
 
@@ -152,28 +360,69 @@ exports.registrarMarcajeReconocimiento = async (req, res) => {
       });
     }
 
+    // VALIDAR MARCAJE DUPLICADO
+    const validacion = await validarMarcajeDuplicado(usuarioId, tipo || 'entrada');
+    
+    if (!validacion.valido) {
+      console.log(`⚠️ Marcaje duplicado detectado: ${validacion.mensaje}`);
+      return res.status(400).json({
+        success: false,
+        message: validacion.mensaje,
+        ultimoMarcaje: validacion.ultimoMarcaje ? {
+          tipo: validacion.ultimoMarcaje.tipo,
+          hora: validacion.ultimoMarcaje.hora,
+          fecha: validacion.ultimoMarcaje.fecha
+        } : null
+      });
+    }
+
+    console.log(`✅ Validación OK: ${validacion.mensaje}`);
+
     // Obtener hora actual
     const ahora = new Date();
     const hora = ahora.toTimeString().split(' ')[0]; // "HH:mm:ss"
     
-    // Calcular estado del marcaje (solo para entradas)
+    // Calcular estado del marcaje según el tipo
     let estado = 'puntual';
     let minutosAtraso = 0;
+    let minutosAnticipado = 0;
+    let minutosDespues = 0;
 
     if ((tipo || 'entrada') === 'entrada' && usuario.horarioId) {
-      const limiteAtraso = parseInt(process.env.LIMITE_ATRASO_MINUTOS) || 30;
+      // Lógica para ENTRADA
+      console.log(`🔍 Calculando estado para ENTRADA:
+        - Usuario: ${usuario.nombre} ${usuario.apellido}
+        - Hora configurada: ${usuario.horarioId.horaEntrada}
+        - Hora de marcaje: ${hora}
+      `);
       
       const resultado = calcularEstadoMarcaje(
         usuario.horarioId.horaEntrada,
-        hora,
-        usuario.horarioId.toleranciaMinutos,
-        limiteAtraso
+        hora
       );
       
       estado = resultado.estado;
       minutosAtraso = resultado.minutosAtraso;
       
-      console.log(`📊 Estado calculado: ${estado} | Minutos de atraso: ${minutosAtraso}`);
+      console.log(`📊 Estado calculado (ENTRADA): ${estado} | Minutos de atraso: ${minutosAtraso}`);
+    } else if (tipo === 'salida' && usuario.horarioId) {
+      // Lógica para SALIDA
+      console.log(`🔍 Calculando estado para SALIDA:
+        - Usuario: ${usuario.nombre} ${usuario.apellido}
+        - Hora configurada: ${usuario.horarioId.horaSalida}
+        - Hora de marcaje: ${hora}
+      `);
+      
+      const resultado = calcularEstadoSalida(
+        usuario.horarioId.horaSalida,
+        hora
+      );
+      
+      estado = resultado.estado;
+      minutosAnticipado = resultado.minutosAnticipado;
+      minutosDespues = resultado.minutosDespues;
+      
+      console.log(`📊 Estado calculado (SALIDA): ${estado} | Minutos anticipado: ${minutosAnticipado} | Minutos después: ${minutosDespues}`);
     }
 
     // Crear marcaje en la base de datos
@@ -362,28 +611,69 @@ exports.registrarMarcaje = async (req, res) => {
 
     console.log('📝 Usuario encontrado:', usuario.nombre, usuario.apellido);
 
+    // VALIDAR MARCAJE DUPLICADO
+    const validacion = await validarMarcajeDuplicado(usuarioId, tipo);
+    
+    if (!validacion.valido) {
+      console.log(`⚠️ Marcaje duplicado detectado: ${validacion.mensaje}`);
+      return res.status(400).json({
+        success: false,
+        message: validacion.mensaje,
+        ultimoMarcaje: validacion.ultimoMarcaje ? {
+          tipo: validacion.ultimoMarcaje.tipo,
+          hora: validacion.ultimoMarcaje.hora,
+          fecha: validacion.ultimoMarcaje.fecha
+        } : null
+      });
+    }
+
+    console.log(`✅ Validación OK: ${validacion.mensaje}`);
+
     // Obtener hora actual
     const ahora = new Date();
     const hora = ahora.toTimeString().split(' ')[0];
     
-    // Calcular estado (solo para entradas)
+    // Calcular estado según el tipo
     let estado = 'puntual';
     let minutosAtraso = 0;
+    let minutosAnticipado = 0;
+    let minutosDespues = 0;
 
     if (tipo === 'entrada' && usuario.horarioId) {
-      const limiteAtraso = parseInt(process.env.LIMITE_ATRASO_MINUTOS) || 30;
+      // Lógica para ENTRADA
+      console.log(`🔍 Calculando estado para ENTRADA (AI):
+        - Usuario: ${usuario.nombre} ${usuario.apellido}
+        - Hora configurada: ${usuario.horarioId.horaEntrada}
+        - Hora de marcaje: ${hora}
+      `);
       
       const resultado = calcularEstadoMarcaje(
         usuario.horarioId.horaEntrada,
-        hora,
-        usuario.horarioId.toleranciaMinutos,
-        limiteAtraso
+        hora
       );
       
       estado = resultado.estado;
       minutosAtraso = resultado.minutosAtraso;
       
-      console.log('📝 Estado calculado:', estado, 'Atraso:', minutosAtraso, 'min');
+      console.log('📝 Estado calculado (ENTRADA):', estado, 'Atraso:', minutosAtraso, 'min');
+    } else if (tipo === 'salida' && usuario.horarioId) {
+      // Lógica para SALIDA
+      console.log(`🔍 Calculando estado para SALIDA (AI):
+        - Usuario: ${usuario.nombre} ${usuario.apellido}
+        - Hora configurada: ${usuario.horarioId.horaSalida}
+        - Hora de marcaje: ${hora}
+      `);
+      
+      const resultado = calcularEstadoSalida(
+        usuario.horarioId.horaSalida,
+        hora
+      );
+      
+      estado = resultado.estado;
+      minutosAnticipado = resultado.minutosAnticipado;
+      minutosDespues = resultado.minutosDespues;
+      
+      console.log('📝 Estado calculado (SALIDA):', estado, 'Anticipado:', minutosAnticipado, 'min, Después:', minutosDespues, 'min');
     }
 
     // Crear marcaje
@@ -529,26 +819,69 @@ exports.registrarMarcajeConCredenciales = async (req, res) => {
       });
     }
 
+    console.log('📝 Usuario autenticado:', usuario.nombre, usuario.apellido);
+
+    // VALIDAR MARCAJE DUPLICADO
+    const validacion = await validarMarcajeDuplicado(usuario._id, tipo);
+    
+    if (!validacion.valido) {
+      console.log(`⚠️ Marcaje duplicado detectado: ${validacion.mensaje}`);
+      return res.status(400).json({
+        success: false,
+        message: validacion.mensaje,
+        ultimoMarcaje: validacion.ultimoMarcaje ? {
+          tipo: validacion.ultimoMarcaje.tipo,
+          hora: validacion.ultimoMarcaje.hora,
+          fecha: validacion.ultimoMarcaje.fecha
+        } : null
+      });
+    }
+
+    console.log(`✅ Validación OK: ${validacion.mensaje}`);
+
     // Obtener hora actual
     const ahora = new Date();
     const hora = ahora.toTimeString().split(' ')[0];
 
-    // Calcular estado
+    // Calcular estado según el tipo
     let estado = 'puntual';
     let minutosAtraso = 0;
+    let minutosAnticipado = 0;
+    let minutosDespues = 0;
 
     if (tipo === 'entrada' && usuario.horarioId) {
-      const limiteAtraso = parseInt(process.env.LIMITE_ATRASO_MINUTOS) || 30;
+      // Lógica para ENTRADA
+      console.log(`🔍 Calculando estado para ENTRADA (Credenciales):
+        - Usuario: ${usuario.nombre} ${usuario.apellido}
+        - Hora configurada: ${usuario.horarioId.horaEntrada}
+        - Hora de marcaje: ${hora}
+      `);
       
       const resultado = calcularEstadoMarcaje(
         usuario.horarioId.horaEntrada,
-        hora,
-        usuario.horarioId.toleranciaMinutos,
-        limiteAtraso
+        hora
       );
       
       estado = resultado.estado;
       minutosAtraso = resultado.minutosAtraso;
+      
+      console.log('📝 Estado calculado (ENTRADA):', estado, 'Atraso:', minutosAtraso, 'min');
+    } else if (tipo === 'salida' && usuario.horarioId) {
+      // Lógica para SALIDA
+      console.log(`🔍 Calculando estado para SALIDA (Credenciales):
+        - Usuario: ${usuario.nombre} ${usuario.apellido}
+        - Hora configurada: ${usuario.horarioId.horaSalida}
+        - Hora de marcaje: ${hora}
+      `);
+      
+      const resultado = calcularEstadoSalida(
+        usuario.horarioId.horaSalida,
+        hora
+      );
+      
+      estado = resultado.estado;
+      minutosAnticipado = resultado.minutosAnticipado;
+      minutosDespues = resultado.minutosDespues;
     }
 
     // Crear marcaje
@@ -664,7 +997,20 @@ exports.getMarcajes = async (req, res) => {
     if (tipo) filtros.tipo = tipo;
     
     const marcajes = await Marcaje.find(filtros)
-      .populate('usuarioId', 'nombre apellido rut cargo email')
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido rut cargo email horarioId establecimientoId',
+        populate: [
+          {
+            path: 'horarioId',
+            select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+          },
+          {
+            path: 'establecimientoId',
+            select: 'nombre codigo direccion'
+          }
+        ]
+      })
       .sort({ fecha: -1, hora: -1 })
       .limit(100);
     
@@ -698,7 +1044,20 @@ exports.getMarcajesHoy = async (req, res) => {
         $lt: new Date(hoy.getTime() + 24 * 60 * 60 * 1000)
       }
     })
-      .populate('usuarioId', 'nombre apellido rut cargo email')
+      .populate({
+        path: 'usuarioId',
+        select: 'nombre apellido rut cargo email horarioId establecimientoId',
+        populate: [
+          {
+            path: 'horarioId',
+            select: 'nombre horaEntrada horaSalida toleranciaMinutos'
+          },
+          {
+            path: 'establecimientoId',
+            select: 'nombre codigo direccion'
+          }
+        ]
+      })
       .sort({ hora: -1 });
     
     res.status(200).json({

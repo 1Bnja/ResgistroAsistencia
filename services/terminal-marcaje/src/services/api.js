@@ -20,8 +20,19 @@ export const marcajeService = {
 
   // Registrar marcaje con credenciales (fallback manual)
   registrarMarcajeConCredenciales: async (data) => {
-    const response = await api.post('/marcajes/credenciales', data);
-    return response.data;
+    try {
+      const response = await api.post('/marcajes/credenciales', data);
+      return {
+        success: true,
+        ...response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al registrar marcaje con credenciales',
+        statusCode: error.response?.status
+      };
+    }
   },
 
   // Obtener marcajes de hoy

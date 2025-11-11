@@ -4,7 +4,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/database');
-const redis = require('./config/redis');
 const errorHandler = require('./middleware/errorHandler');
 const slaveGuard = require('./middleware/slaveGuard');
 const { register, metricsMiddleware } = require('./middleware/metrics');
@@ -19,11 +18,6 @@ const app = express();
 
 // Conectar a base de datos
 connectDB();
-
-// Conectar a Redis (cache)
-redis.connect().catch(err => {
-  console.warn('⚠️  Redis no disponible, continuando sin cache:', err.message);
-});
 
 // Middlewares
 app.use(helmet()); // Seguridad
