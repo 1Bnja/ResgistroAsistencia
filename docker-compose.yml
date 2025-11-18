@@ -71,7 +71,7 @@ services:
       dockerfile: Dockerfile
     container_name: ai-service-1
     ports:
-      - "5050:5000"
+      - "5055:5000"
     environment:
       BACKEND_URL: http://api-backend:3000/api/v1
       FLASK_DEBUG: "False"
@@ -91,7 +91,7 @@ services:
       dockerfile: Dockerfile
     container_name: ai-service-2
     ports:
-      - "5051:5000"
+      - "5056:5000"
     environment:
       BACKEND_URL: http://api-backend:3000/api/v1
       FLASK_DEBUG: "False"
@@ -111,7 +111,7 @@ services:
       dockerfile: Dockerfile
     container_name: websocket-service-1
     ports:
-      - "3002:3002"
+      - "3005:3002"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${WEBSOCKET_PORT:-3002}
@@ -133,7 +133,7 @@ services:
       dockerfile: Dockerfile
     container_name: websocket-service-2
     ports:
-      - "3005:3002"
+      - "3006:3002"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${WEBSOCKET_PORT:-3002}
@@ -153,14 +153,13 @@ services:
     build:
       context: ./services/frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_WS_URL=${VITE_WS_URL}
+        - VITE_EXPORT_URL=${VITE_EXPORT_URL}
+        - VITE_ENV=${VITE_ENV}
+        - VITE_USE_MOCK=${VITE_USE_MOCK}
     container_name: frontend-1
-    # AGREGADO: Variables de entorno para el frontend
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
-      - VITE_WS_URL=${VITE_WS_URL}
-      - VITE_EXPORT_URL=${VITE_EXPORT_URL}
-      - VITE_ENV=${VITE_ENV}
-      - VITE_USE_MOCK=${VITE_USE_MOCK}
     networks:
       - frontend-network
     restart: unless-stopped
@@ -169,14 +168,13 @@ services:
     build:
       context: ./services/frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_WS_URL=${VITE_WS_URL}
+        - VITE_EXPORT_URL=${VITE_EXPORT_URL}
+        - VITE_ENV=${VITE_ENV}
+        - VITE_USE_MOCK=${VITE_USE_MOCK}
     container_name: frontend-2
-    #Variables de entorno para el frontend
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
-      - VITE_WS_URL=${VITE_WS_URL}
-      - VITE_EXPORT_URL=${VITE_EXPORT_URL}
-      - VITE_ENV=${VITE_ENV}
-      - VITE_USE_MOCK=${VITE_USE_MOCK}
     networks:
       - frontend-network
     restart: unless-stopped
@@ -185,13 +183,12 @@ services:
     build:
       context: ./services/terminal-marcaje
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_WS_URL=${VITE_WS_URL}
     container_name: terminal-marcaje
     ports:
       - "5174:8080"
-    # Variables de entorno si las necesita
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
-      - VITE_WS_URL=${VITE_WS_URL}
     networks:
       - frontend-network
       - backend-network
