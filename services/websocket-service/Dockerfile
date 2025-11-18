@@ -11,8 +11,14 @@ RUN npm install --omit=dev
 # Copy source code
 COPY . .
 
+# Dar permisos al usuario node
+RUN chown -R node:node /app
+
 # Expose WebSocket port
 EXPOSE 3002
+
+# Cambiar a usuario no privilegiado
+USER node
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

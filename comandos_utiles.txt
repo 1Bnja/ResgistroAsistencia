@@ -1,0 +1,351 @@
+═══════════════════════════════════════════════════════════════════════════
+  COMANDOS MANUALES PARA PROBAR LOAD BALANCING
+  Sistema de Control de Asistencia
+═══════════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 VER ESTADO DE TODOS LOS SERVICIOS CON RÉPLICAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Ver todos los servicios con load balancing
+docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "frontend|api-backend|websocket|ai-service"
+
+# Ver todos en formato compacto
+docker ps | grep -E "frontend-|api-backend-|websocket-service-|ai-service-"
+
+
+═══════════════════════════════════════════════════════════════════════════
+🔴 FRONTEND (2 réplicas)
+═══════════════════════════════════════════════════════════════════════════
+
+# Ver estado
+docker ps | grep frontend
+
+# Detener frontend-1
+docker stop frontend-1
+
+# Probar que sigue funcionando (va a frontend-2)
+curl http://localhost:8080/
+
+# Ver en navegador
+open http://localhost:8080/
+
+# Reiniciar frontend-1
+docker start frontend-1
+
+# ─────────────────────────────────────────────
+
+# Detener frontend-2 (ahora va a frontend-1)
+docker stop frontend-2
+
+# Probar que sigue funcionando
+curl http://localhost:8080/
+
+# Reiniciar frontend-2
+docker start frontend-2
+
+
+═══════════════════════════════════════════════════════════════════════════
+🔴 API BACKEND (2 réplicas)
+═══════════════════════════════════════════════════════════════════════════
+
+# Ver estado
+docker ps | grep api-backend
+
+# Detener api-backend-1
+docker stop api-backend-1
+
+# Probar que sigue funcionando (va a api-backend-2)
+curl http://localhost:8080/health
+curl http://localhost:3001/health  # Directo a backend-2
+
+# Ver respuesta completa
+curl http://localhost:8080/health | jq .
+
+# Reiniciar api-backend-1
+docker start api-backend-1
+
+# Esperar que esté healthy
+sleep 10
+
+# ─────────────────────────────────────────────
+
+# Detener api-backend-2 (ahora va a api-backend-1)
+docker stop api-backend-2
+
+# Probar que sigue funcionando
+curl http://localhost:8080/health
+curl http://localhost:3000/health  # Directo a backend-1
+
+# Reiniciar api-backend-2
+docker start api-backend-2
+
+
+═══════════════════════════════════════════════════════════════════════════
+🔴 WEBSOCKET (2 réplicas)
+═══════════════════════════════════════════════════════════════════════════
+
+# Ver estado
+docker ps | grep websocket
+
+# Detener websocket-service-1
+docker stop websocket-service-1
+
+# Probar que sigue funcionando (va a websocket-2)
+curl http://localhost:3005/health  # Directo a websocket-2
+
+# Reiniciar websocket-service-1
+docker start websocket-service-1
+
+# ─────────────────────────────────────────────
+
+# Detener websocket-service-2
+docker stop websocket-service-2
+
+# Probar que sigue funcionando (va a websocket-1)
+curl http://localhost:3002/health  # Directo a websocket-1
+
+# Reiniciar websocket-service-2
+docker start websocket-service-2
+
+
+═══════════════════════════════════════════════════════════════════════════
+🔴 AI SERVICE (2 réplicas)
+═══════════════════════════════════════════════════════════════════════════
+
+# Ver estado
+docker ps | grep ai-service
+
+# Detener ai-service-1
+docker stop ai-service-1
+
+# Probar que sigue funcionando (va a ai-service-2)
+curl http://localhost:5051/health  # Directo a ai-service-2
+
+# Reiniciar ai-service-1
+docker start ai-service-1
+
+# ─────────────────────────────────────────────
+
+# Detener ai-service-2
+docker stop ai-service-2
+
+# Probar que sigue funcionando (va a ai-service-1)
+curl http://localhost:5050/health  # Directo a ai-service-1
+
+# Reiniciar ai-service-2
+docker start ai-service-2
+
+
+═══════════════════════════════════════════════════════════════════════════
+📊 COMANDOS DE MONITOREO
+═══════════════════════════════════════════════════════════════════════════
+
+# Dashboard de HAProxy (abre en navegador)
+open http://localhost:8404/stats
+# Usuario: admin | Password: admin123
+
+# Ver en tiempo real qué servicios están UP/DOWN
+watch -n 1 'docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "frontend|api-backend|websocket|ai-service"'
+
+# Ver logs de HAProxy en tiempo real
+docker logs -f resgistroasistencia-api-gateway-1
+
+# Ver logs de un backend específico
+docker logs -f api-backend-1
+docker logs -f api-backend-2
+
+# Ver uso de recursos en tiempo real
+docker stats frontend-1 frontend-2 api-backend-1 api-backend-2
+
+# Ver health status de todos
+docker inspect --format='{{.Name}}: {{.State.Health.Status}}' frontend-1 frontend-2 api-backend-1 api-backend-2 websocket-service-1 websocket-service-2 ai-service-1 ai-service-2
+
+# Ver métricas de Prometheus
+curl http://localhost:8405/metrics | grep haproxy_server_up
+
+
+═══════════════════════════════════════════════════════════════════════════
+🧪 TEST RÁPIDO DE FAILOVER
+═══════════════════════════════════════════════════════════════════════════
+
+# Test completo automático para API Backend
+
+# 1. Detener backend-1
+docker stop api-backend-1
+
+# 2. Hacer 5 requests (van a backend-2)
+for i in {1..5}; do curl -s http://localhost:8080/health > /dev/null && echo "✅ Request $i OK"; done
+
+# 3. Reiniciar backend-1
+docker start api-backend-1
+
+# 4. Esperar que esté healthy
+sleep 10
+
+# 5. Hacer 5 requests más (se distribuyen)
+for i in {1..5}; do curl -s http://localhost:8080/health > /dev/null && echo "✅ Request $i OK"; done
+
+
+═══════════════════════════════════════════════════════════════════════════
+💥 PRUEBA DE CAOS (detener todos menos uno)
+═══════════════════════════════════════════════════════════════════════════
+
+# Detener TODAS las réplicas 1
+docker stop frontend-1 api-backend-1 websocket-service-1 ai-service-1
+
+# El sistema DEBE seguir funcionando solo con las réplicas 2
+curl http://localhost:8080/
+curl http://localhost:8080/health
+
+# Ver qué está corriendo
+docker ps | grep -E "frontend-|api-backend-|websocket-service-|ai-service-"
+
+# Reiniciar todas las réplicas 1
+docker start frontend-1 api-backend-1 websocket-service-1 ai-service-1
+
+# ─────────────────────────────────────────────
+
+# Detener TODAS las réplicas 2
+docker stop frontend-2 api-backend-2 websocket-service-2 ai-service-2
+
+# El sistema DEBE seguir funcionando solo con las réplicas 1
+curl http://localhost:8080/
+curl http://localhost:8080/health
+
+# Reiniciar todas las réplicas 2
+docker start frontend-2 api-backend-2 websocket-service-2 ai-service-2
+
+
+═══════════════════════════════════════════════════════════════════════════
+🔄 REINICIAR TODO EL LOAD BALANCING
+═══════════════════════════════════════════════════════════════════════════
+
+# Reiniciar todos los servicios con réplicas (soft)
+docker restart frontend-1 frontend-2 api-backend-1 api-backend-2 websocket-service-1 websocket-service-2 ai-service-1 ai-service-2
+
+# Reconstruir todo (rebuild)
+docker compose up -d --force-recreate frontend-1 frontend-2 api-backend-1 api-backend-2 websocket-service-1 websocket-service-2 ai-service-1 ai-service-2
+
+# Reconstruir con build nuevo
+docker compose up -d --build frontend-1 frontend-2 api-backend-1 api-backend-2 websocket-service-1 websocket-service-2 ai-service-1 ai-service-2
+
+# Solo reiniciar el API Gateway
+docker restart resgistroasistencia-api-gateway-1
+
+
+═══════════════════════════════════════════════════════════════════════════
+🎯 TEST DE CARGA SIMPLE
+═══════════════════════════════════════════════════════════════════════════
+
+# Enviar 100 requests y contar éxitos/fallos
+success=0; for i in {1..100}; do curl -sf http://localhost:8080/health > /dev/null && ((success++)); done; echo "Exitosos: $success/100"
+
+# Enviar requests continuos (Ctrl+C para detener)
+while true; do curl -s http://localhost:8080/health > /dev/null && echo "$(date): OK"; sleep 0.5; done
+
+# Test con tiempo específico (30 segundos)
+timeout 30 bash -c 'count=0; while true; do curl -s http://localhost:8080/health > /dev/null && ((count++)); sleep 0.1; done; echo "Total: $count requests"'
+
+
+═══════════════════════════════════════════════════════════════════════════
+📝 RESUMEN DE PUERTOS
+═══════════════════════════════════════════════════════════════════════════
+
+┌──────────────┬───────────┬───────────┬─────────────┐
+│ Servicio     │ Réplica 1 │ Réplica 2 │ HAProxy     │
+├──────────────┼───────────┼───────────┼─────────────┤
+│ Frontend     │ -         │ -         │ :8080       │
+│ API Backend  │ :3000     │ :3001     │ :8080/api   │
+│ WebSocket    │ :3002     │ :3005     │ :8080/ws    │
+│ AI Service   │ :5050     │ :5051     │ :8080/ai    │
+│ HAProxy Stats│ -         │ -         │ :8404/stats │
+│ Prometheus   │ -         │ -         │ :8405/metrics│
+└──────────────┴───────────┴───────────┴─────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════
+📚 SCRIPTS DISPONIBLES
+═══════════════════════════════════════════════════════════════════════════
+
+# Test completo paso a paso con failover
+./scripts/test-failover.sh
+
+# Demostración visual en tiempo real
+./scripts/demo-load-balancing.sh
+
+# Verificación completa del sistema
+./scripts/verify-load-balancing.sh
+
+# Verificación de usuarios no privilegiados
+./scripts/verify-non-root-users.sh
+
+
+═══════════════════════════════════════════════════════════════════════════
+💡 TIPS ÚTILES
+═══════════════════════════════════════════════════════════════════════════
+
+1. Siempre verifica el dashboard de HAProxy antes y después de hacer cambios:
+   http://localhost:8404/stats
+
+2. Para ver logs en tiempo real de múltiples contenedores:
+   docker logs -f api-backend-1 &
+   docker logs -f api-backend-2 &
+
+3. Para detener todos los logs:
+   killall docker
+
+4. Para ver solo errores en los logs:
+   docker logs api-backend-1 2>&1 | grep -i error
+
+5. Para ver la distribución de requests en HAProxy:
+   curl -s http://localhost:8404/stats | grep -A 5 "api_backend"
+
+6. Para simular fallo completo de un servicio:
+   docker pause api-backend-1  # Congela el contenedor
+   docker unpause api-backend-1  # Descongela
+
+7. Para forzar un health check failed:
+   docker exec api-backend-1 pkill -9 node  # Mata el proceso
+   # Docker lo reiniciará automáticamente
+
+8. Ver tiempo de uptime de cada contenedor:
+   docker ps --format "table {{.Names}}\t{{.Status}}"
+
+
+═══════════════════════════════════════════════════════════════════════════
+⚠️  NOTAS IMPORTANTES
+═══════════════════════════════════════════════════════════════════════════
+
+- Los servicios tardan ~10 segundos en estar "healthy" después de iniciarse
+- HAProxy detecta fallos en ~5-10 segundos y redirige el tráfico automáticamente
+- MongoDB Atlas (cloud) maneja su propia replicación, independiente de estos servicios
+- Ambos api-backend son idénticos, no hay master/slave a nivel de aplicación
+- El algoritmo de balanceo es Round-Robin (50/50) para todos los servicios
+
+
+═══════════════════════════════════════════════════════════════════════════
+📞 DOCUMENTACIÓN ADICIONAL
+═══════════════════════════════════════════════════════════════════════════
+
+- docs/LOAD_BALANCING.md - Documentación completa de arquitectura
+- docs/USUARIOS_NO_PRIVILEGIADOS.md - Configuración de seguridad
+- services/api-gateway/haproxy.cfg - Configuración de HAProxy
+- docker-compose.yml - Configuración de servicios
+
+
+═══════════════════════════════════════════════════════════════════════════
+Última actualización: 11 de noviembre de 2025
+Sistema de Control de Asistencia - DevOps Team
+═══════════════════════════════════════════════════════════════════════════
+
+
+docker exec backup-service /scripts/backup-daily.sh
+
+docker exec backup-service crontab -l
+
+docker exec backup-service tail -f /var/log/backup/cron.log
+
+docker exec backup-service ls -lh /backups/mongodb/
+
+docker exec backup-service du -sh /backups/mongodb/*

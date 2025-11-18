@@ -776,13 +776,13 @@ exports.registrarMarcaje = async (req, res) => {
 // ==========================================
 exports.registrarMarcajeConCredenciales = async (req, res) => {
   try {
-    const { rut, password, tipo, ubicacion } = req.body;
+    const { email, password, tipo, ubicacion } = req.body;
 
     // Validar datos
-    if (!rut || !password) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'RUT y contraseña son requeridos'
+        message: 'Email y contraseña son requeridos'
       });
     }
 
@@ -793,8 +793,10 @@ exports.registrarMarcajeConCredenciales = async (req, res) => {
       });
     }
 
-    // Buscar usuario y validar contraseña
-    const usuario = await Usuario.findOne({ rut }).select('+password').populate('horarioId');
+    console.log('🔐 Login manual con email:', email);
+
+    // Buscar usuario por email y validar contraseña
+    const usuario = await Usuario.findOne({ email }).select('+password').populate('horarioId');
     
     if (!usuario) {
       return res.status(401).json({
@@ -819,7 +821,7 @@ exports.registrarMarcajeConCredenciales = async (req, res) => {
       });
     }
 
-    console.log('📝 Usuario autenticado:', usuario.nombre, usuario.apellido);
+    console.log('✅ Usuario autenticado:', usuario.nombre, usuario.apellido, `(${usuario.rol})`);
 
     // VALIDAR MARCAJE DUPLICADO
     const validacion = await validarMarcajeDuplicado(usuario._id, tipo);

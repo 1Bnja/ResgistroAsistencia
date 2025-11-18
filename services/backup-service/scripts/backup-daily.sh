@@ -1,9 +1,8 @@
 #!/bin/bash
 
 ##############################################################################
-# Script de Backup para MongoDB Atlas (Cloud)
-# Descripción: Realiza backup de la base de datos MongoDB en la nube,
-#              comprime el backup y lo almacena en un volumen externo
+# Script de Backup Diario (para ejecución desde cron)
+# Ejecuta backup de MongoDB con retención de 7 días
 ##############################################################################
 
 # Configuración
@@ -12,40 +11,42 @@ BACKUP_NAME="mongodb_backup_${TIMESTAMP}"
 BACKUP_DIR="/backups/mongodb"
 TEMP_DIR="/tmp/${BACKUP_NAME}"
 COMPRESSED_FILE="${BACKUP_DIR}/${BACKUP_NAME}.tar.gz"
+LOG_FILE="/var/log/backup/backup_${TIMESTAMP}.log"
 
 # Configuración de retención (días)
-RETENTION_DAYS=${RETENTION_DAYS:-7}
+RETENTION_DAYS=7
 
 # Colores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # Función para logging
 log() {
-    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
+    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
 }
 
 error() {
-    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" >&2
+    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" | tee -a "$LOG_FILE" >&2
 }
 
 warning() {
-    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING:${NC} $1"
+    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING:${NC} $1" | tee -a "$LOG_FILE"
 }
 
-# Verificar que las variables de entorno estén configuradas
-if [ -z "$MONGODB_URI" ] && [ -z "$MONGODB_WRITE_URI" ]; then
-    error "MONGODB_URI o MONGODB_WRITE_URI no están configuradas"
+# Verificar variables de entorno
+if [ -z "$MONGODB_URI" ]; then
+    error "MONGODB_URI no está configurada"
     exit 1
 fi
 
-# Usar la URI correcta
-MONGO_URI=${MONGODB_WRITE_URI:-$MONGODB_URI}
-DB_NAME=${MONGODB_DB_NAME:-asistencia_db}
+MONGO_URI=${MONGODB_URI}
+DB_NAME="asistencia_db"
 
-log "=== Iniciando Backup de MongoDB ==="
+log "========================================="
+log "=== INICIANDO BACKUP AUTOMÁTICO ==="
+log "========================================="
 log "Base de datos: ${DB_NAME}"
 log "Timestamp: ${TIMESTAMP}"
 
@@ -59,7 +60,7 @@ if mongodump --uri="${MONGO_URI}" \
              --db="${DB_NAME}" \
              --out="${TEMP_DIR}" \
              --gzip \
-             2>&1 | tee "${BACKUP_DIR}/${BACKUP_NAME}.log"; then
+             2>&1 | tee -a "$LOG_FILE"; then
     log "✓ Dump completado exitosamente"
 else
     error "✗ Fallo al realizar el dump"
@@ -82,17 +83,20 @@ fi
 log "Limpiando archivos temporales..."
 rm -rf "${TEMP_DIR}"
 
-# 4. Eliminar backups antiguos (retención)
+# 4. Eliminar backups antiguos (retención de 7 días)
 log "Aplicando política de retención (${RETENTION_DAYS} días)..."
-find "${BACKUP_DIR}" -name "mongodb_backup_*.tar.gz" -type f -mtime +${RETENTION_DAYS} -delete
-DELETED_COUNT=$(find "${BACKUP_DIR}" -name "mongodb_backup_*.tar.gz" -type f -mtime +${RETENTION_DAYS} | wc -l)
-if [ $DELETED_COUNT -gt 0 ]; then
-    log "✓ Eliminados ${DELETED_COUNT} backups antiguos"
-else
+DELETED_COUNT=0
+find "${BACKUP_DIR}" -name "mongodb_backup_*.tar.gz" -type f -mtime +${RETENTION_DAYS} | while read file; do
+    rm "$file"
+    log "  Eliminado: $(basename $file)"
+    ((DELETED_COUNT++))
+done
+
+if [ $DELETED_COUNT -eq 0 ]; then
     log "✓ No hay backups antiguos para eliminar"
 fi
 
-# 5. Verificar la integridad del backup (opcional)
+# 5. Verificar la integridad del backup
 log "Verificando integridad del archivo comprimido..."
 if tar -tzf "${COMPRESSED_FILE}" > /dev/null 2>&1; then
     log "✓ Verificación de integridad OK"
@@ -102,19 +106,17 @@ else
 fi
 
 # 6. Resumen
-log "=== Backup Completado ==="
+TOTAL_BACKUPS=$(ls -1 ${BACKUP_DIR}/mongodb_backup_*.tar.gz 2>/dev/null | wc -l | tr -d ' ')
+log "========================================="
+log "=== BACKUP COMPLETADO EXITOSAMENTE ==="
+log "========================================="
 log "Archivo: ${COMPRESSED_FILE}"
 log "Tamaño: ${BACKUP_SIZE}"
-log "Backups totales en ${BACKUP_DIR}: $(ls -1 ${BACKUP_DIR}/mongodb_backup_*.tar.gz 2>/dev/null | wc -l)"
+log "Backups totales: ${TOTAL_BACKUPS}"
+log "Retención: ${RETENTION_DAYS} días"
+log "Próximo backup: $(date -d '+1 day' '+%Y-%m-%d') 02:00:00"
 
-# 7. Opcional: Copiar a almacenamiento externo (descomentar si aplica)
-# EXTERNAL_STORAGE="/mnt/external_backup"
-# if [ -d "$EXTERNAL_STORAGE" ]; then
-#     log "Copiando a almacenamiento externo..."
-#     cp "${COMPRESSED_FILE}" "${EXTERNAL_STORAGE}/"
-#     log "✓ Backup copiado a ${EXTERNAL_STORAGE}"
-# else
-#     warning "Almacenamiento externo no disponible en ${EXTERNAL_STORAGE}"
-# fi
+# Limpiar logs antiguos (mantener últimos 30 días)
+find "/var/log/backup" -name "backup_*.log" -type f -mtime +30 -delete
 
 exit 0

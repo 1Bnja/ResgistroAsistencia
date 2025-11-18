@@ -20,6 +20,18 @@ const logger = winston.createLogger({
           return msg;
         })
       )
+    }),
+    // Logs centralizados
+    new winston.transports.File({ 
+      filename: '/app/logs/export-service-error.log', 
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5
+    }),
+    new winston.transports.File({ 
+      filename: '/app/logs/export-service.log',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5
     })
   ]
 });

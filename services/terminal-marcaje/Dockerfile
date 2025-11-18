@@ -12,12 +12,16 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# Crear usuario no privilegiado
+RUN addgroup -g 1001 -S nginx-user && \
+    adduser -S nginx-user -u 1001 -G nginx-user
+
 # Copiar build de React
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configuración de Nginx
+# Configuración de Nginx para puerto no privilegiado
 RUN echo 'server { \
-    listen 80; \
+    listen 8080; \
     location / { \
         root /usr/share/nginx/html; \
         index index.html index.htm; \
@@ -25,6 +29,16 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# Crear directorios necesarios con permisos
+RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
+    chown -R nginx-user:nginx-user /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html && \
+    chmod -R 755 /var/cache/nginx /var/run /var/log/nginx && \
+    touch /var/run/nginx.pid && \
+    chown nginx-user:nginx-user /var/run/nginx.pid
+
+# Cambiar a usuario no privilegiado
+USER nginx-user
+
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]

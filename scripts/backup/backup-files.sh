@@ -6,23 +6,24 @@
 ##############################################################################
 
 # Configuración
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_NAME="files_backup_${TIMESTAMP}"
-BACKUP_DIR="/backups/files"
+BACKUP_DIR="${PROJECT_ROOT}/volumes/backups"
 COMPRESSED_FILE="${BACKUP_DIR}/${BACKUP_NAME}.tar.gz"
 
-# Directorios a respaldar (ajustar según tu estructura)
+# Directorios a respaldar (relativos al PROJECT_ROOT)
 DIRS_TO_BACKUP=(
-    "/app/logs"
-    "/app/uploads"
-    "/app/config"
-    "/app/public/assets"
+    "volumes/logs"
+    "config"
+    "docs"
 )
 
 # Archivos específicos a respaldar
 FILES_TO_BACKUP=(
-    "/app/.env"
-    "/app/docker-compose.yml"
+    "docker-compose.yml"
+    ".env.example"
 )
 
 # Configuración de retención (días)
@@ -56,6 +57,8 @@ mkdir -p "${BACKUP_DIR}"
 TEMP_LIST="/tmp/backup_list_${TIMESTAMP}.txt"
 > "$TEMP_LIST"
 
+cd "${PROJECT_ROOT}"
+
 # Agregar directorios existentes a la lista
 for dir in "${DIRS_TO_BACKUP[@]}"; do
     if [ -d "$dir" ]; then
@@ -79,35 +82,38 @@ done
 # Verificar que hay algo que respaldar
 if [ ! -s "$TEMP_LIST" ]; then
     error "No hay archivos o directorios para respaldar"
-    rm -f "$TEMP_LIST"
+    rm "$TEMP_LIST"
     exit 1
 fi
 
-# Crear backup comprimido
-log "Creando archivo comprimido..."
-if tar -czf "${COMPRESSED_FILE}" -T "$TEMP_LIST" 2>&1 | grep -v "Removing leading"; then
+# Crear el backup comprimido
+log "Comprimiendo archivos..."
+if tar -czf "${COMPRESSED_FILE}" -T "$TEMP_LIST" 2>/dev/null; then
     BACKUP_SIZE=$(du -h "${COMPRESSED_FILE}" | cut -f1)
-    log "✓ Backup creado: ${COMPRESSED_FILE} (${BACKUP_SIZE})"
+    log "✓ Backup comprimido: ${COMPRESSED_FILE} (${BACKUP_SIZE})"
 else
-    error "✗ Fallo al crear el backup"
-    rm -f "$TEMP_LIST"
+    error "✗ Fallo al comprimir el backup"
+    rm "$TEMP_LIST"
     exit 1
 fi
 
-# Limpiar archivo temporal
-rm -f "$TEMP_LIST"
+# Limpiar lista temporal
+rm "$TEMP_LIST"
 
-# Aplicar política de retención
+# Eliminar backups antiguos (retención)
 log "Aplicando política de retención (${RETENTION_DAYS} días)..."
-DELETED_COUNT=$(find "${BACKUP_DIR}" -name "files_backup_*.tar.gz" -type f -mtime +${RETENTION_DAYS} -delete -print | wc -l)
-if [ $DELETED_COUNT -gt 0 ]; then
-    log "✓ Eliminados ${DELETED_COUNT} backups antiguos"
+OLD_BACKUPS=$(find "${BACKUP_DIR}" -name "files_backup_*.tar.gz" -type f -mtime +${RETENTION_DAYS})
+if [ -n "$OLD_BACKUPS" ]; then
+    echo "$OLD_BACKUPS" | while read file; do
+        rm "$file"
+        log "Eliminado: $(basename $file)"
+    done
 else
     log "✓ No hay backups antiguos para eliminar"
 fi
 
 # Verificar integridad
-log "Verificando integridad del backup..."
+log "Verificando integridad del archivo comprimido..."
 if tar -tzf "${COMPRESSED_FILE}" > /dev/null 2>&1; then
     log "✓ Verificación de integridad OK"
 else
@@ -116,9 +122,10 @@ else
 fi
 
 # Resumen
-log "=== Backup de Archivos Completado ==="
+TOTAL_BACKUPS=$(ls -1 ${BACKUP_DIR}/files_backup_*.tar.gz 2>/dev/null | wc -l | tr -d ' ')
+log "=== Backup Completado ==="
 log "Archivo: ${COMPRESSED_FILE}"
 log "Tamaño: ${BACKUP_SIZE}"
-log "Backups totales: $(ls -1 ${BACKUP_DIR}/files_backup_*.tar.gz 2>/dev/null | wc -l)"
+log "Backups totales: ${TOTAL_BACKUPS}"
 
 exit 0

@@ -40,9 +40,7 @@ const usuarioSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: function() {
-      return this.rol !== 'funcionario';
-    },
+    required: true, // Ahora TODOS los usuarios requieren contraseña
     select: false // No retornar en queries por defecto
   },
   fotoFacial: {
