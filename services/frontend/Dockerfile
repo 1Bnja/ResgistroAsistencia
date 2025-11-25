@@ -3,6 +3,13 @@
 # Etapa 1: Build
 FROM node:18-alpine AS builder
 
+# Argumentos para build time
+ARG VITE_API_URL
+ARG VITE_WS_URL
+ARG VITE_EXPORT_URL
+ARG VITE_ENV
+ARG VITE_USE_MOCK
+
 WORKDIR /app
 
 # Copiar archivos de dependencias
@@ -13,6 +20,13 @@ RUN npm ci && npm cache clean --force
 
 # Copiar código fuente
 COPY . .
+
+# Pasar las variables de entorno a Vite durante el build
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_WS_URL=$VITE_WS_URL
+ENV VITE_EXPORT_URL=$VITE_EXPORT_URL
+ENV VITE_ENV=$VITE_ENV
+ENV VITE_USE_MOCK=$VITE_USE_MOCK
 
 # Build de producción
 RUN npm run build
