@@ -1,0 +1,156 @@
+name: Security Scan with Trivy
+
+on:
+  push:
+    branches: [ main, Benja2 ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Escaneo semanal cada lunes a las 9 AM
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  scan-dockerfiles:
+    name: Scan Dockerfiles
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        service:
+          - api-backend
+          - api-IA
+          - frontend
+          - terminal-marcaje
+          - notification-service
+          - export-service
+          - websocket-service
+          - backup-service
+          - grafana
+          - prometheus
+          - api-gateway
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner on Dockerfile
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'services/${{ matrix.service }}/Dockerfile'
+          format: 'sarif'
+          output: 'trivy-${{ matrix.service }}-dockerfile.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+      
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-${{ matrix.service }}-dockerfile.sarif'
+          category: 'dockerfile-${{ matrix.service }}'
+
+  scan-base-images:
+    name: Scan Base Images
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        image:
+          - name: node
+            tag: 18-alpine
+          - name: python
+            tag: 3.11-slim
+          - name: nginx
+            tag: alpine
+          - name: mongo
+            tag: latest
+          - name: redis
+            tag: alpine
+    
+    steps:
+      - name: Run Trivy vulnerability scanner on base image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ matrix.image.name }}:${{ matrix.image.tag }}'
+          format: 'sarif'
+          output: 'trivy-${{ matrix.image.name }}.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+      
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-${{ matrix.image.name }}.sarif'
+          category: 'base-image-${{ matrix.image.name }}'
+
+  scan-dependencies:
+    name: Scan Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Scan Node.js dependencies
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln'
+          format: 'sarif'
+          output: 'trivy-dependencies.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+      
+      - name: Upload dependency scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-dependencies.sarif'
+          category: 'dependencies'
+
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [scan-dockerfiles, scan-base-images, scan-dependencies]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy full scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          output: 'trivy-report.txt'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+      
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-report
+          path: trivy-report.txt
+          retention-days: 30
+      
+      - name: Comment PR with scan results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('trivy-report.txt', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🛡️ Security Scan Results\n\n\`\`\`\n${report}\n\`\`\``
+            });

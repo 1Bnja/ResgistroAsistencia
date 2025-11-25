@@ -1,6 +1,41 @@
 ═══════════════════════════════════════════════════════════════════════════
-  COMANDOS MANUALES PARA PROBAR LOAD BALANCING
+  COMANDOS ÚTILES
   Sistema de Control de Asistencia
+═══════════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️  SEGURIDAD - ESCANEO DE VULNERABILIDADES CON TRIVY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Escanear TODOS los servicios (genera reportes)
+./scripts/security/scan-containers.sh
+
+# Escanear un servicio específico
+./scripts/security/scan-quick.sh frontend
+./scripts/security/scan-quick.sh api-backend
+./scripts/security/scan-quick.sh api-IA
+
+# Escanear una imagen directamente
+trivy image node:18-alpine
+trivy image python:3.11-slim
+trivy image mongo:latest
+
+# Escanear solo vulnerabilidades CRÍTICAS
+trivy image node:18-alpine --severity CRITICAL
+
+# Escanear un Dockerfile
+trivy config services/frontend/Dockerfile
+
+# Escanear dependencias
+trivy fs services/frontend/package.json
+trivy fs services/api-IA/requirements.txt
+
+# Ver reportes generados
+ls -lh security-reports/
+cat security-reports/summary_*.txt
+
+═══════════════════════════════════════════════════════════════════════════
+  COMANDOS MANUALES PARA PROBAR LOAD BALANCING
 ═══════════════════════════════════════════════════════════════════════════
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
