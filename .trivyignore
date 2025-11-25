@@ -1,0 +1,6 @@
+# Trivy Ignore File
+# Vulnerabilidades que se pueden ignorar temporalmente con justificación
+
+# Ejemplo: ignorar vulnerabilidades específicas
+# CVE-2024-XXXXX  # Razón: No aplica a nuestro caso de uso
+# CVE-2024-YYYYY  # Razón: Fix pendiente en upstream, mitigado con otras medidas

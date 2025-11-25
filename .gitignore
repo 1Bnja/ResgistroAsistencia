@@ -39,3 +39,8 @@ Thumbs.db
 *.tmp
 temp/
 tmp/
+
+# Reportes de seguridad
+security-reports/
+*.sarif
+trivy-*.txt

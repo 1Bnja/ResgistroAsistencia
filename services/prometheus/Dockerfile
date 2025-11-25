@@ -6,7 +6,11 @@ LABEL maintainer="Sistema de Control de Asistencia"
 LABEL description="Prometheus para monitoreo de métricas"
 
 # Copiar configuración personalizada
-COPY prometheus.yml /etc/prometheus/prometheus.yml
+COPY --chown=65534:65534 prometheus.yml /etc/prometheus/prometheus.yml
+
+# La imagen oficial de Prometheus ya corre como usuario no-root (nobody UID 65534)
+# Especificamos explícitamente para Trivy
+USER nobody
 
 # El resto de la configuración se hace vía command en docker-compose
 # - storage.tsdb.path se monta como volumen

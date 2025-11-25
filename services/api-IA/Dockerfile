@@ -2,7 +2,7 @@
 FROM python:3.10-slim
 
 # 2. Instalar las dependencias de LINUX
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     libboost-python-dev \

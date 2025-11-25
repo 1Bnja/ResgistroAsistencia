@@ -1,0 +1,92 @@
+.PHONY: help security-scan security-quick security-images security-deps security-report clean-reports
+
+# Colores para output
+BLUE := \033[0;34m
+GREEN := \033[0;32m
+YELLOW := \033[1;33m
+NC := \033[0m # No Color
+
+help: ## Mostrar esta ayuda
+	@echo "$(BLUE)═══════════════════════════════════════════════════$(NC)"
+	@echo "$(BLUE)  Comandos de Seguridad - Trivy Scanner$(NC)"
+	@echo "$(BLUE)═══════════════════════════════════════════════════$(NC)"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-25s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+
+security-scan: ## Escanear TODOS los servicios (completo)
+	@echo "$(BLUE)Iniciando escaneo completo de seguridad...$(NC)"
+	@./scripts/security/scan-containers.sh
+
+security-quick: ## Escaneo rápido de un servicio (ej: make security-quick SERVICE=frontend)
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "$(YELLOW)Uso: make security-quick SERVICE=<nombre>$(NC)"; \
+		echo "$(YELLOW)Servicios disponibles: frontend, api-backend, api-IA, terminal-marcaje$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Escaneando $(SERVICE)...$(NC)"
+	@./scripts/security/scan-quick.sh $(SERVICE)
+
+security-images: ## Escanear imágenes base (node, python, mongo, etc.)
+	@echo "$(BLUE)Escaneando imágenes base...$(NC)"
+	@echo "$(YELLOW)► Node.js$(NC)"
+	@trivy image node:18-alpine --severity HIGH,CRITICAL --quiet
+	@echo ""
+	@echo "$(YELLOW)► Python$(NC)"
+	@trivy image python:3.11-slim --severity HIGH,CRITICAL --quiet
+	@echo ""
+	@echo "$(YELLOW)► MongoDB$(NC)"
+	@trivy image mongo:latest --severity HIGH,CRITICAL --quiet
+	@echo ""
+	@echo "$(YELLOW)► Nginx$(NC)"
+	@trivy image nginx:alpine --severity HIGH,CRITICAL --quiet
+	@echo ""
+	@echo "$(YELLOW)► Redis$(NC)"
+	@trivy image redis:alpine --severity HIGH,CRITICAL --quiet
+
+security-deps: ## Escanear dependencias (package.json, requirements.txt)
+	@echo "$(BLUE)Escaneando dependencias...$(NC)"
+	@echo "$(YELLOW)► API Backend$(NC)"
+	@trivy fs services/api-backend/package.json --severity HIGH,CRITICAL --quiet
+	@echo ""
+	@echo "$(YELLOW)► API IA$(NC)"
+	@trivy fs services/api-IA/requirements.txt --severity HIGH,CRITICAL --quiet
+	@echo ""
+	@echo "$(YELLOW)► Frontend$(NC)"
+	@trivy fs services/frontend/package.json --severity HIGH,CRITICAL --quiet
+	@echo ""
+	@echo "$(YELLOW)► Notification Service$(NC)"
+	@trivy fs services/notification-service/package.json --severity HIGH,CRITICAL --quiet
+
+security-dockerfiles: ## Escanear todos los Dockerfiles
+	@echo "$(BLUE)Escaneando Dockerfiles...$(NC)"
+	@for service in services/*/Dockerfile; do \
+		echo "$(YELLOW)► $$service$(NC)"; \
+		trivy config "$$service" --severity HIGH,CRITICAL --quiet || true; \
+		echo ""; \
+	done
+
+security-report: ## Generar reporte de seguridad completo
+	@echo "$(BLUE)Generando reporte de seguridad...$(NC)"
+	@mkdir -p security-reports
+	@./scripts/security/scan-containers.sh
+	@echo ""
+	@echo "$(GREEN)✓ Reporte generado en: security-reports/$(NC)"
+	@ls -lh security-reports/summary_*.txt | tail -1
+
+security-critical: ## Mostrar solo vulnerabilidades CRÍTICAS
+	@echo "$(BLUE)Buscando vulnerabilidades CRÍTICAS...$(NC)"
+	@trivy image node:18-alpine --severity CRITICAL
+	@trivy image python:3.11-slim --severity CRITICAL
+	@trivy image mongo:latest --severity CRITICAL
+
+clean-reports: ## Limpiar reportes antiguos
+	@echo "$(YELLOW)Limpiando reportes de seguridad...$(NC)"
+	@rm -rf security-reports/*.txt
+	@echo "$(GREEN)✓ Reportes limpiados$(NC)"
+
+# Aliases útiles
+scan: security-scan ## Alias para security-scan
+quick: security-quick ## Alias para security-quick
+images: security-images ## Alias para security-images
+deps: security-deps ## Alias para security-deps
