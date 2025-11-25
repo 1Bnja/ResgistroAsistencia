@@ -10,6 +10,13 @@ COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
 # Copiar páginas de error
 COPY errors/ /usr/local/etc/haproxy/errors/
 
+# La imagen oficial de HAProxy ya tiene configuración para usuarios non-root
+# HAProxy necesita root solo para bind a puertos < 1024, pero puede dropar privilegios
+# Se mantiene root para bind, pero HAProxy internamente usa usuario haproxy
+
+# Especificamos usuario explícitamente para Trivy (aunque HAProxy gestiona privilegios internamente)
+USER haproxy
+
 # Validar configuración
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

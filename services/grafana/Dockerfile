@@ -6,8 +6,12 @@ LABEL maintainer="Sistema de Control de Asistencia"
 LABEL description="Grafana para visualización de métricas"
 
 # Copiar configuraciones de provisioning
-COPY provisioning/datasources/ /etc/grafana/provisioning/datasources/
-COPY provisioning/dashboards/ /etc/grafana/provisioning/dashboards/
+COPY --chown=472:0 provisioning/datasources/ /etc/grafana/provisioning/datasources/
+COPY --chown=472:0 provisioning/dashboards/ /etc/grafana/provisioning/dashboards/
+
+# La imagen oficial de Grafana ya corre como usuario no-root (grafana UID 472)
+# Especificamos explícitamente para Trivy
+USER grafana
 
 # Configuraciones via ENV se pasan en docker-compose:
 # - GF_SECURITY_ADMIN_USER
