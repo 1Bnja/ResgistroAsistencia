@@ -1,5 +1,5 @@
 # Grafana Service
-FROM grafana/grafana:latest
+FROM grafana/grafana:10.4.1
 
 # Metadata
 LABEL maintainer="Sistema de Control de Asistencia"

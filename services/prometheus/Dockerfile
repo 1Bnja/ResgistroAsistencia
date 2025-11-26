@@ -1,5 +1,5 @@
 # Prometheus Service
-FROM prom/prometheus:latest
+FROM prom/prometheus:v2.51.1
 
 # Metadata
 LABEL maintainer="Sistema de Control de Asistencia"
