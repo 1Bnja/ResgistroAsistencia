@@ -19,7 +19,7 @@ ENV VITE_WS_URL=$VITE_WS_URL
 RUN npm run build
 
 # Production stage
-FROM nginx:alpine
+FROM nginx:1.25-alpine
 
 # Crear usuario no privilegiado
 RUN addgroup -g 1001 -S nginx-user && \
