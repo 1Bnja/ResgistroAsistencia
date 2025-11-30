@@ -44,3 +44,6 @@ tmp/
 security-reports/
 *.sarif
 trivy-*.txt
+
+install-autostart.sh 
+uninstall-autostart.sh

@@ -8,6 +8,11 @@ services:
     networks:
       - frontend-network
       - backend-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   api-backend-1:
     build:
@@ -29,9 +34,14 @@ services:
     networks:
       - backend-network
       - dev-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -57,9 +67,14 @@ services:
     networks:
       - backend-network
       - dev-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -79,7 +94,7 @@ services:
       - backend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -99,7 +114,7 @@ services:
       - backend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -121,7 +136,7 @@ services:
       - frontend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -143,7 +158,7 @@ services:
       - frontend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -234,7 +249,7 @@ services:
     restart: unless-stopped
     # habia un bug en el puerto
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3003/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3003/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -257,7 +272,7 @@ services:
       - backend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3004/api/export/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3004/api/export/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -284,7 +299,7 @@ services:
       - frontend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -310,7 +325,7 @@ services:
     depends_on:
       - prometheus
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -335,7 +350,7 @@ services:
       - backend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -353,7 +368,7 @@ services:
     restart: unless-stopped
     # SE MANTIENE IGUAL
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/metrics"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9100/metrics" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -373,7 +388,7 @@ services:
       - backend-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "test", "-f", "/var/log/backup/cron.log"]
+      test: [ "CMD", "test", "-f", "/var/log/backup/cron.log" ]
       interval: 60s
       timeout: 5s
       retries: 3
