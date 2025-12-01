@@ -228,38 +228,38 @@ export const usuariosAPI = {
     console.log('🌐 API SERVICE - imagenes is array:', Array.isArray(imagenes));
     console.log('🌐 API SERVICE - imagenes length:', imagenes?.length);
     console.log('🌐 API SERVICE - First image preview:', imagenes?.[0]?.substring(0, 100));
-    
+
     if (USE_MOCK) {
       await mockDelay(2000);
-      return { 
-        data: { 
-          success: true, 
+      return {
+        data: {
+          success: true,
           message: 'Reconocimiento facial entrenado exitosamente',
           data: {
             rostros_procesados: imagenes.length,
             encodings_guardados: imagenes.length
           }
-        } 
+        }
       };
     }
-    
+
     const payload = { imagenes };
     console.log('🌐 API SERVICE - Sending payload:', {
       endpoint: `/usuarios/${id}/entrenar-facial`,
       payloadKeys: Object.keys(payload),
       imagenesCount: payload.imagenes?.length
     });
-    
+
     return api.post(`/usuarios/${id}/entrenar-facial`, payload);
   },
   getEstadoFacial: async (id) => {
     if (USE_MOCK) {
       await mockDelay();
-      return { 
-        data: { 
-          success: true, 
+      return {
+        data: {
+          success: true,
           data: { activo: Math.random() > 0.5, usuario: 'Mock Usuario' }
-        } 
+        }
       };
     }
     return api.get(`/usuarios/${id}/estado-facial`);
@@ -275,11 +275,11 @@ export const marcajesAPI = {
     }
     const response = await api.get('/marcajes', { params });
     // Backend devuelve { success, count, data: marcajes[] }
-    return { 
-      data: { 
-        success: response.data.success, 
-        marcajes: response.data.data || [] 
-      } 
+    return {
+      data: {
+        success: response.data.success,
+        marcajes: response.data.data || []
+      }
     };
   },
   getHoy: async (params = {}) => {
@@ -290,11 +290,11 @@ export const marcajesAPI = {
     // Usar /marcajes con parámetros de filtro
     const response = await api.get('/marcajes', { params });
     // Backend devuelve { success, count, data: marcajes[] }
-    return { 
-      data: { 
-        success: response.data.success, 
-        marcajes: response.data.data || [] 
-      } 
+    return {
+      data: {
+        success: response.data.success,
+        marcajes: response.data.data || []
+      }
     };
   },
   registrar: async (marcajeData) => {
@@ -314,7 +314,7 @@ export const marcajesAPI = {
   },
   exportarExcel: async (params) => {
     const exportApi = axios.create({
-      baseURL: import.meta.env.VITE_EXPORT_URL || 'http://localhost:3004',
+      baseURL: '/', // Usar ruta relativa para pasar por el proxy (HAProxy) y evitar errores CORS/PNA
       timeout: 60000,
       responseType: 'blob'
     });
@@ -326,12 +326,12 @@ export const marcajesAPI = {
     }
 
     const response = await exportApi.get('/api/export/marcajes/excel', { params });
-    
+
     // Crear URL del blob y descargar
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    
+
     // Obtener nombre del archivo del header o usar uno por defecto
     const contentDisposition = response.headers['content-disposition'];
     let filename = 'reporte_asistencia.xlsx';
@@ -339,13 +339,13 @@ export const marcajesAPI = {
       const filenameMatch = contentDisposition.match(/filename="(.+)"/);
       if (filenameMatch) filename = filenameMatch[1];
     }
-    
+
     link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-    
+
     return { data: { success: true, message: 'Archivo descargado exitosamente' } };
   },
   getEstadisticas: async (params) => {
@@ -363,11 +363,11 @@ export const marcajesAPI = {
         }
       };
     }
-    
+
     // Obtener todos los marcajes y calcular estadísticas en el cliente
     const marcajesResponse = await api.get('/marcajes');
     const marcajes = marcajesResponse.data.data || [];
-    
+
     // Filtrar marcajes de hoy (fecha local del navegador)
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -376,12 +376,12 @@ export const marcajesAPI = {
       fechaMarcaje.setHours(0, 0, 0, 0);
       return fechaMarcaje.getTime() === hoy.getTime();
     });
-    
+
     // Calcular estadísticas
     const puntuales = marcajesHoy.filter(m => m.estado === 'puntual' && m.tipo === 'entrada').length;
     const atrasos = marcajesHoy.filter(m => m.estado === 'atraso' && m.tipo === 'entrada').length;
     const anticipados = marcajesHoy.filter(m => m.estado === 'anticipado' && m.tipo === 'entrada').length;
-    
+
     return {
       data: {
         success: true,
