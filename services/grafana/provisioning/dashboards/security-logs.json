@@ -1,0 +1,275 @@
+{
+  "dashboard": {
+    "title": "Security Logs Dashboard",
+    "tags": ["security", "logs", "loki"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Intentos de Autenticación Fallidos",
+        "type": "logs",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "{service=~\"api-backend.*\"} |~ \"(?i)(auth|login|password|token|jwt).*(error|fail|denied|invalid)\"",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Accesos Denegados (401, 403)",
+        "type": "logs",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "{service=~\"api-gateway|api-backend.*\"} |~ \" (401|403) \"",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Gráfica de Errores de Autenticación por Hora",
+        "type": "timeseries",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "sum(count_over_time({service=~\"api-backend.*\"} |~ \"(?i)(auth|login).*(error|fail)\" [1m]))",
+            "refId": "A",
+            "legendFormat": "Auth Errors"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisPlacement": "auto",
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "pointSize": 5,
+              "showPoints": "auto"
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Códigos HTTP 4xx y 5xx",
+        "type": "timeseries",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "sum(count_over_time({service=\"api-gateway\"} |~ \" 4[0-9]{2} \" [1m]))",
+            "refId": "A",
+            "legendFormat": "4xx Errors"
+          },
+          {
+            "expr": "sum(count_over_time({service=\"api-gateway\"} |~ \" 5[0-9]{2} \" [1m]))",
+            "refId": "B",
+            "legendFormat": "5xx Errors"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisPlacement": "auto",
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "pointSize": 5,
+              "showPoints": "auto"
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Conexiones a Base de Datos",
+        "type": "logs",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "{service=~\"api-backend.*|export-service|notification-service\"} |~ \"(?i)(mongodb|database).*(connect|disconnect|error)\"",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        },
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending"
+        }
+      },
+      {
+        "id": 6,
+        "title": "Errores Críticos del Sistema",
+        "type": "logs",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "{service=~\".*\"} |~ \"(?i)(critical|fatal|error)\"",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending"
+        }
+      },
+      {
+        "id": 7,
+        "title": "Top 10 IPs con más solicitudes",
+        "type": "table",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "topk(10, sum by (client_ip) (count_over_time({service=\"api-gateway\"} | regexp \"(?P<client_ip>[0-9\\\\.]+)\" [1h])))",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "client_ip": "IP Address",
+                "Value": "Request Count"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Actividad de Marcajes",
+        "type": "logs",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "{service=~\"api-backend.*\"} |~ \"(?i)marcaje\"",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        },
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending"
+        }
+      }
+    ],
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h"]
+    },
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "links": [],
+    "liveNow": false,
+    "panels": [],
+    "style": "dark",
+    "uid": "security-logs-dashboard"
+  },
+  "overwrite": true
+}

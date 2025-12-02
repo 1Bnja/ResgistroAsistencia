@@ -1,15 +1,13 @@
-# Grafana Dashboards Provisioning
-# Auto-carga dashboards desde archivos
-
 apiVersion: 1
 
 providers:
-  - name: 'default'
+  - name: 'Security Logs'
     orgId: 1
-    folder: ''
+    folder: 'Seguridad'
     type: file
     disableDeletion: false
     updateIntervalSeconds: 10
     allowUiUpdates: true
     options:
       path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true
