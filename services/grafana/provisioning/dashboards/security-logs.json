@@ -1,11 +1,10 @@
 {
-  "dashboard": {
-    "title": "Security Logs Dashboard",
-    "tags": ["security", "logs", "loki"],
-    "timezone": "browser",
-    "schemaVersion": 38,
-    "version": 1,
-    "refresh": "30s",
+  "title": "Security Logs Dashboard",
+  "tags": ["security", "logs", "loki"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
     "panels": [
       {
         "id": 1,
@@ -267,9 +266,8 @@
     "graphTooltip": 0,
     "links": [],
     "liveNow": false,
-    "panels": [],
     "style": "dark",
-    "uid": "security-logs-dashboard"
-  },
-  "overwrite": true
+    "uid": "security-logs-dashboard",
+    "id": null,
+    "gnetId": null
 }
